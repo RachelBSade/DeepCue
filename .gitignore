@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment — never commit real credentials
+.env
+
+# Model weights — large binary files, downloaded after training
+models/video/*.onnx
+models/audio/*.onnx
+models/text/*.onnx
+models/fusion/*.onnx
+models/text/whisper_cache/
+
+# Generated reports
+reports/
+
+# Django
+*.log
+db.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db

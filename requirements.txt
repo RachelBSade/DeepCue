@@ -1,0 +1,67 @@
+# =============================================================================
+# DeepCue — Backend Requirements (Django Inference Server)
+# Environment: Local Windows CPU / Production Server (CPU-only)
+# Purpose:     Runtime inference only. NO model training happens here.
+#              All heavy training is done on Kaggle (see requirements_kaggle.txt).
+#
+# Install:
+#   pip install -r requirements.txt
+#
+# NOTE: PyTorch CPU-only wheel is pulled from the PyTorch index below.
+#       This avoids downloading the massive CUDA build (~2.5 GB vs ~200 MB).
+# =============================================================================
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# --- Web Framework & Async Server -------------------------------------------
+Django==4.2.13                    # LTS release; stable, well-supported
+channels==4.1.0                   # Django WebSocket / ASGI support
+channels-redis==4.2.0             # Redis channel layer backend for Channels
+daphne==4.1.2                     # ASGI server (integrates natively with Channels)
+django-cors-headers==4.4.0        # CORS headers for frontend → backend dev
+
+# --- Task Queue & Scheduling -------------------------------------------------
+celery==5.4.0                     # Distributed task queue
+django-celery-results==2.5.1      # Store Celery results in Django DB / Redis
+redis==5.0.8                      # Python Redis client (broker + cache)
+
+# --- Database ----------------------------------------------------------------
+pymongo==4.8.0                    # MongoDB Atlas sync driver (for reports, schemas)
+motor==3.5.0                      # Async MongoDB driver (for Channels consumers)
+
+# --- ML: Inference Runtime (CPU) --------------------------------------------
+# PyTorch CPU-only — pulled from --extra-index-url above
+torch==2.3.1+cpu
+torchaudio==2.3.1+cpu
+
+# ONNX Runtime — CPU inference for all quantized model weights
+onnxruntime==1.18.1
+
+# HuggingFace: tokenizer + model config loading (weights loaded as ONNX, not PT)
+transformers==4.43.3
+sentencepiece==0.2.0              # Required by XLM-RoBERTa tokenizer
+protobuf==4.25.4                  # Required by transformers / tokenizer serialization
+
+# Whisper — Hebrew speech-to-text (base/small model, CPU-compatible)
+openai-whisper==20231117
+
+# Audio feature extraction (pitch, RMS, speech rate)
+librosa==0.10.2.post1
+soundfile==0.12.1                 # Audio I/O backend for librosa
+audioread==3.0.1                  # Fallback audio decoder
+
+# --- Numerical & Scientific --------------------------------------------------
+numpy==1.26.4
+scipy==1.13.1
+
+# --- Data Validation ---------------------------------------------------------
+pydantic==2.8.2                   # Strict payload validation for WS messages
+python-dotenv==1.0.1              # Load .env variables into Django settings
+
+# --- PDF Reporting -----------------------------------------------------------
+reportlab==4.2.2                  # PDF generation (charts, RTL Hebrew text, layout)
+Pillow==10.4.0                    # Image processing for reportlab (logo, charts)
+
+# --- Utilities ---------------------------------------------------------------
+python-multipart==0.0.9           # Multipart form parsing (if needed for uploads)
+typing-extensions==4.12.2         # Backport of newer typing features (TypedDict etc.)
