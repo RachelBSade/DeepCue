@@ -79,45 +79,45 @@
 ## PHASE 5 — Inference Pipelines (Django Backend — CPU-Optimized)
 
 ### 5A — Video Pipeline (Facial Micro-Expression)
-- [ ] **5A.1** Write `inference/video_pipeline.py` — `VideoEmotionPipeline` class with `load_model()` and `predict(landmarks_json) -> float` interface
-- [ ] **5A.2** Implement landmark preprocessing — convert 468 MediaPipe (x, y, z) coords to normalized feature tensor for EfficientNet-B0 input
-- [ ] **5A.3** Implement LSTM temporal windowing — buffer last N frames, pass sequence to LSTM head
-- [ ] **5A.4** Load quantized ONNX weights (EfficientNet-B0 + LSTM exported from Kaggle) via `onnxruntime.InferenceSession`
-- [ ] **5A.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling wrapping entire predict call
+- [x] **5A.1** Write `inference/video_pipeline.py` — `VideoEmotionPipeline` class with `load_model()` and `predict(landmarks_json) -> float` interface
+- [x] **5A.2** Implement landmark preprocessing — convert 468 MediaPipe (x, y, z) coords to normalized feature tensor for EfficientNet-B0 input
+- [x] **5A.3** Implement LSTM temporal windowing — buffer last N frames, pass sequence to LSTM head
+- [x] **5A.4** Load quantized ONNX weights (EfficientNet-B0 + LSTM exported from Kaggle) via `onnxruntime.InferenceSession`
+- [x] **5A.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling wrapping entire predict call
 
 ### 5B — Audio Pipeline (Paralinguistic Features)
-- [ ] **5B.1** Write `inference/audio_pipeline.py` — `AudioEmotionPipeline` class with `load_model()` and `predict(audio_bytes) -> float` interface
-- [ ] **5B.2** Implement feature extraction — pitch (librosa), speech rate, RMS energy, WPM estimation from raw audio bytes
-- [ ] **5B.3** Load quantized wav2vec 2.0 ONNX weights, extract deep audio embeddings
-- [ ] **5B.4** Combine paralinguistic features + wav2vec embeddings as input to classifier head
-- [ ] **5B.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling
+- [x] **5B.1** Write `inference/audio_pipeline.py` — `AudioEmotionPipeline` class with `load_model()` and `predict(audio_bytes) -> float` interface
+- [x] **5B.2** Implement feature extraction — pitch (librosa), speech rate, RMS energy, WPM estimation from raw audio bytes
+- [x] **5B.3** Load quantized wav2vec 2.0 ONNX weights, extract deep audio embeddings
+- [x] **5B.4** Combine paralinguistic features + wav2vec embeddings as input to classifier head
+- [x] **5B.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling
 
 ### 5C — Text Pipeline (Whisper + XLM-RoBERTa)
-- [ ] **5C.1** Write `inference/text_pipeline.py` — `TextEmotionPipeline` class with `load_model()`, `transcribe(audio_bytes) -> str`, and `predict(text: str) -> float` interface
-- [ ] **5C.2** Integrate OpenAI Whisper (small/base model) for Hebrew speech-to-text transcription
-- [ ] **5C.3** Load fine-tuned XLM-RoBERTa ONNX weights for sentiment + uncertainty analysis
-- [ ] **5C.4** Implement Hebrew-aware text preprocessing (tokenization via HuggingFace tokenizer)
-- [ ] **5C.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling
+- [x] **5C.1** Write `inference/text_pipeline.py` — `TextEmotionPipeline` class with `load_model()`, `transcribe(audio_bytes) -> str`, and `predict(text: str) -> float` interface
+- [x] **5C.2** Integrate OpenAI Whisper (small/base model) for Hebrew speech-to-text transcription
+- [x] **5C.3** Load fine-tuned XLM-RoBERTa ONNX weights for sentiment + uncertainty analysis
+- [x] **5C.4** Implement Hebrew-aware text preprocessing (tokenization via HuggingFace tokenizer)
+- [x] **5C.5** Implement `NEUTRAL_FALLBACK = 0.5` exception handling
 
 ### 5D — Fusion Pipeline (Cross-Modal Transformer + MLP Head)
-- [ ] **5D.1** Write `inference/fusion_pipeline.py` — `FusionPipeline` class with `load_model()` and `predict(video_score, audio_score, text_score) -> dict` interface
-- [ ] **5D.2** Implement Cross-modal Transformer encoder (load ONNX weights from Kaggle training)
-- [ ] **5D.3** Implement MLP head: `Linear(128, 64) → ReLU → Dropout(0.3) → Linear(64, 8) → Softmax`
-- [ ] **5D.4** Output: dict mapping 8 emotion labels to confidence scores (sum to 1.0)
-- [ ] **5D.5** Define the 8 emotion classes: `[neutral, confident, anxious, happy, sad, angry, surprised, uncertain]`
-- [ ] **5D.6** Implement `NEUTRAL_FALLBACK = 0.5` exception handling; fallback output: `{neutral: 1.0, all others: 0.0}`
+- [x] **5D.1** Write `inference/fusion_pipeline.py` — `FusionPipeline` class with `load_model()` and `predict(video_score, audio_score, text_score) -> dict` interface
+- [x] **5D.2** Implement Cross-modal Transformer encoder (load ONNX weights from Kaggle training)
+- [x] **5D.3** Implement MLP head: `Linear(128, 64) → ReLU → Dropout(0.3) → Linear(64, 8) → Softmax`
+- [x] **5D.4** Output: dict mapping 8 emotion labels to confidence scores (sum to 1.0)
+- [x] **5D.5** Define the 8 emotion classes: `[neutral, confident, anxious, happy, sad, angry, surprised, uncertain]`
+- [x] **5D.6** Implement `NEUTRAL_FALLBACK = 0.5` exception handling; fallback output: `{neutral: 1.0, all others: 0.0}`
 
 ---
 
 ## PHASE 6 — Kaggle Training Scripts
 
-- [ ] **6.1** Write `kaggle_scripts/train_video_model.py` — EfficientNet-B0 + LSTM training on RAVDESS dataset (facial frames → emotion labels), export to ONNX + quantize
-- [ ] **6.2** Write `kaggle_scripts/train_audio_model.py` — wav2vec 2.0 fine-tuning on RAVDESS audio, export to ONNX + quantize
-- [ ] **6.3** Write `kaggle_scripts/finetune_xlm_roberta.py` — XLM-RoBERTa fine-tuning on CMU-MOSI + Hebrew sentiment dataset, export to ONNX + quantize
-- [ ] **6.4** Write `kaggle_scripts/train_fusion_model.py` — Cross-modal Transformer + MLP head training on fused RAVDESS/CMU-MOSI features, export to ONNX + quantize
-- [ ] **6.5** Write `kaggle_scripts/evaluate_models.py` — compute Macro F1-score on RAVDESS and CMU-MOSI held-out test sets, assert >= 0.50 threshold
-- [ ] **6.6** Write `kaggle_scripts/export_and_quantize.py` — unified export script: PT → ONNX → INT8 dynamic quantization for all models
-- [ ] **6.7** Document Kaggle dataset setup and model artifact download workflow in `kaggle_scripts/README.md`
+- [x] **6.1** Write `kaggle_scripts/train_video_model.py` — EfficientNet-B0 + LSTM training on RAVDESS dataset (facial frames → emotion labels), export to ONNX + quantize
+- [x] **6.2** Write `kaggle_scripts/train_audio_model.py` — wav2vec 2.0 fine-tuning on RAVDESS audio, export to ONNX + quantize
+- [x] **6.3** Write `kaggle_scripts/finetune_xlm_roberta.py` — XLM-RoBERTa fine-tuning on CMU-MOSI + Hebrew sentiment dataset, export to ONNX + quantize
+- [x] **6.4** Write `kaggle_scripts/train_fusion_model.py` — Cross-modal Transformer + MLP head training on fused RAVDESS/CMU-MOSI features, export to ONNX + quantize
+- [x] **6.5** Write `kaggle_scripts/evaluate_models.py` — compute Macro F1-score on RAVDESS and CMU-MOSI held-out test sets, assert >= 0.50 threshold
+- [x] **6.6** Write `kaggle_scripts/export_and_quantize.py` — unified export script: PT → ONNX → INT8 dynamic quantization for all models
+- [x] **6.7** Document Kaggle dataset setup and model artifact download workflow in `kaggle_scripts/README.md`
 
 ---
 

@@ -117,12 +117,36 @@ All Phase 1 files: `manage.py`, `settings/`, `asgi.py`, `urls.py`, `db/`, `apps/
 ---
 
 ## Phase 5 — Inference Pipelines (CPU-Optimized)
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/inference/video_pipeline.py` | `VideoEmotionPipeline`: landmarks→224×224 image, per-session LSTM buffer, ONNX inference |
+| `backend/apps/inference/audio_pipeline.py` | `AudioEmotionPipeline`: librosa feature extraction (pitch, RMS, ZCR, MFCCs) + wav2vec ONNX |
+| `backend/apps/inference/text_pipeline.py` | `TextEmotionPipeline`: Whisper Hebrew STT + XLM-RoBERTa ONNX sentiment scoring |
+| `backend/apps/inference/fusion_pipeline.py` | `FusionPipeline`: 3-score input → Cross-modal Transformer ONNX → 8-class softmax output |
+
+### Also updated
+`backend/tasks/video_tasks.py` — passes `session_id` to `predict()` for LSTM buffer keying.
 
 ---
 
 ## Phase 6 — Kaggle Training Scripts
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `kaggle_scripts/train_video_model.py` | `RAVDESSVideoDataset` + `EfficientNetLSTM` (timm B0 + BiLSTM); trains on RAVDESS mp4s; exports `efficientnet_lstm.onnx` |
+| `kaggle_scripts/train_audio_model.py` | `RAVDESSAudioDataset` + `Wav2Vec2EmotionClassifier`; 2-stage fine-tuning (freeze → full); exports `wav2vec2_classifier.onnx` with dual-input (waveform + features) |
+| `kaggle_scripts/finetune_xlm_roberta.py` | `XLMRobertaRegressor`; trained on CMU-MOSI + optional Hebrew CSV; exports `xlm_roberta_sentiment.onnx` |
+| `kaggle_scripts/train_fusion_model.py` | `CrossModalTransformer` (3-token self-attention + MLP head); supports synthetic or real modality scores; exports `cross_modal_transformer.onnx` |
+| `kaggle_scripts/evaluate_models.py` | CLI evaluator for all 4 models; reports Macro F1 per model; asserts >= 0.50 threshold |
+| `kaggle_scripts/export_and_quantize.py` | Unified export + INT8 dynamic quantization for all models; prints copy instructions for `models/` dirs |
+| `kaggle_scripts/README.md` | Dataset setup, execution order, artifact destinations, performance targets |
 
 ---
 
