@@ -1,0 +1,326 @@
+/* =============================================================================
+   DeepCue — Interview UI Styles
+   Dark theme, professional, Hebrew RTL-ready transcript panel.
+   ============================================================================= */
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base:        #0f1117;
+  --bg-surface:     #1a1d27;
+  --bg-elevated:    #22263a;
+  --border:         #2e3247;
+  --accent:         #4f8ef7;
+  --accent-dim:     #2d5bbf;
+  --text-primary:   #e8eaf0;
+  --text-secondary: #8b92a8;
+  --text-muted:     #555d78;
+  --success:        #3ecf8e;
+  --warning:        #f5a623;
+  --danger:         #e5534b;
+
+  /* emotion colour palette */
+  --em-neutral:    #6c7a9c;
+  --em-confident:  #3ecf8e;
+  --em-anxious:    #f5a623;
+  --em-happy:      #f7d44f;
+  --em-sad:        #4f8ef7;
+  --em-angry:      #e5534b;
+  --em-surprised:  #b57bee;
+  --em-uncertain:  #f0836a;
+
+  --radius:   8px;
+  --radius-sm: 4px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas:
+    "header"
+    "main"
+    "transcript"
+    "controls";
+  height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.app-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.logo-deep  { color: var(--text-primary); }
+.logo-cue   { color: var(--accent); }
+
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.session-timer {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-idle       { background: var(--bg-elevated); color: var(--text-muted); }
+.status-connecting { background: rgba(245,166,35,0.15); color: var(--warning); }
+.status-active     { background: rgba(62,207,142,0.15); color: var(--success); }
+.status-ended      { background: rgba(79,142,247,0.15); color: var(--accent); }
+.status-error      { background: rgba(229,83,75,0.15);  color: var(--danger); }
+
+/* ── Main content ─────────────────────────────────────────────────────────── */
+.main-content {
+  grid-area: main;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* ── Video panel ──────────────────────────────────────────────────────────── */
+.video-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.video-wrapper {
+  position: relative;
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+#webcam {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1); /* mirror for natural feel */
+}
+
+.no-camera-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+.no-camera-overlay.hidden { display: none; }
+
+.candidate-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* ── Emotion panel ────────────────────────────────────────────────────────── */
+.emotion-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+}
+
+.emotion-bars { display: flex; flex-direction: column; gap: 10px; }
+
+.emotion-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.emotion-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  background: var(--em-neutral);
+}
+
+/* Per-emotion bar colours */
+.emotion-row[data-emotion="neutral"]   .bar-fill { background: var(--em-neutral); }
+.emotion-row[data-emotion="confident"] .bar-fill { background: var(--em-confident); }
+.emotion-row[data-emotion="anxious"]   .bar-fill { background: var(--em-anxious); }
+.emotion-row[data-emotion="happy"]     .bar-fill { background: var(--em-happy); }
+.emotion-row[data-emotion="sad"]       .bar-fill { background: var(--em-sad); }
+.emotion-row[data-emotion="angry"]     .bar-fill { background: var(--em-angry); }
+.emotion-row[data-emotion="surprised"] .bar-fill { background: var(--em-surprised); }
+.emotion-row[data-emotion="uncertain"] .bar-fill { background: var(--em-uncertain); }
+
+.emotion-score {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.dominant-emotion {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dominant-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+.dominant-value { font-size: 18px; font-weight: 600; color: var(--text-primary); text-transform: capitalize; }
+
+/* ── Transcript panel ─────────────────────────────────────────────────────── */
+.transcript-panel {
+  grid-area: transcript;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 140px;
+}
+
+.transcript-lang { color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+
+.transcript-feed {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  /* Hebrew RTL is set via dir="rtl" on the element */
+}
+
+.transcript-segment {
+  display: block;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeIn 0.3s ease;
+}
+.transcript-segment:last-child { border-bottom: none; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+/* ── Controls bar ─────────────────────────────────────────────────────────── */
+.controls-bar {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-top: 1px solid var(--border);
+}
+
+.candidate-input {
+  flex: 1;
+  max-width: 240px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.candidate-input:focus { border-color: var(--accent); }
+.candidate-input:disabled { opacity: 0.4; }
+
+.btn {
+  padding: 9px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-start { background: var(--accent); color: #fff; }
+.btn-start:hover:not(:disabled) { background: var(--accent-dim); }
+
+.btn-stop { background: var(--danger); color: #fff; }
+.btn-stop:hover:not(:disabled) { opacity: 0.85; }
+
+.error-message {
+  flex: 1;
+  font-size: 12px;
+  color: var(--danger);
+  min-height: 16px;
+}
+
+/* ── Scrollbar styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-content { grid-template-columns: 1fr; }
+  .emotion-panel { max-height: 260px; }
+}

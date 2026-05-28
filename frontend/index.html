@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="he" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepCue — Real-Time Emotion Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- MediaPipe Face Mesh — must load before ES modules (modules are deferred) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-deep">Deep</span><span class="logo-cue">Cue</span>
+      </div>
+      <div class="header-right">
+        <span id="status-badge" class="status-badge status-idle">Idle</span>
+        <span id="session-timer" class="session-timer">00:00</span>
+      </div>
+    </header>
+
+    <!-- ── Main content ───────────────────────────────────────── -->
+    <main class="main-content">
+
+      <!-- Left: webcam feed -->
+      <section class="video-panel">
+        <div class="video-wrapper">
+          <video id="webcam" autoplay playsinline muted></video>
+          <div id="no-camera-overlay" class="no-camera-overlay">
+            <p>Camera access required</p>
+          </div>
+        </div>
+        <div id="candidate-label" class="candidate-label">—</div>
+      </section>
+
+      <!-- Right: emotion analysis panel -->
+      <aside class="emotion-panel">
+        <h2 class="panel-title">Emotion Analysis</h2>
+
+        <div id="emotion-bars" class="emotion-bars">
+          <div class="emotion-row" data-emotion="neutral">
+            <span class="emotion-label">Neutral</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="confident">
+            <span class="emotion-label">Confident</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="anxious">
+            <span class="emotion-label">Anxious</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="happy">
+            <span class="emotion-label">Happy</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="sad">
+            <span class="emotion-label">Sad</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="angry">
+            <span class="emotion-label">Angry</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="surprised">
+            <span class="emotion-label">Surprised</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="uncertain">
+            <span class="emotion-label">Uncertain</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+        </div>
+
+        <div class="dominant-emotion">
+          <span class="dominant-label">Dominant</span>
+          <span id="dominant-value" class="dominant-value">—</span>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ── Transcript ─────────────────────────────────────────── -->
+    <section class="transcript-panel">
+      <h2 class="panel-title">Transcript
+        <span class="transcript-lang">(Hebrew)</span>
+      </h2>
+      <div id="transcript-feed" class="transcript-feed" dir="rtl"></div>
+    </section>
+
+    <!-- ── Controls ───────────────────────────────────────────── -->
+    <footer class="controls-bar">
+      <input
+        id="candidate-name-input"
+        class="candidate-input"
+        type="text"
+        placeholder="Candidate name"
+        maxlength="80"
+      />
+      <button id="btn-start" class="btn btn-start">▶ Start Interview</button>
+      <button id="btn-stop"  class="btn btn-stop" disabled>■ Stop</button>
+      <div id="error-message" class="error-message"></div>
+    </footer>
+
+  </div>
+
+  <!-- ES module entry point — loaded after MediaPipe globals are available -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>

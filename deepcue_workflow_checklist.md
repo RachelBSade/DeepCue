@@ -52,13 +52,13 @@
 
 ## PHASE 3 — JS Web Frontend
 
-- [ ] **3.1** Scaffold single-page frontend (`frontend/`) — `index.html`, `style.css`, `main.js`, `mediapipe_handler.js`, `websocket_client.js`, `audio_handler.js`, `ui_controller.js`
-- [ ] **3.2** Implement `mediapipe_handler.js` — load MediaPipe Face Mesh JS, initialize camera, extract 468 landmark coordinates per frame, output normalized JSON
-- [ ] **3.3** Implement `audio_handler.js` — access microphone via Web Audio API, chunk audio into configurable windows (e.g., 3-second sliding windows), encode as base64 PCM/WAV
-- [ ] **3.4** Implement `websocket_client.js` — manage WebSocket connection lifecycle, send/receive typed messages, handle reconnect logic with exponential backoff
-- [ ] **3.5** Implement `ui_controller.js` — interview start/stop controls, live emotion display panel, confidence score bars, real-time transcript feed
-- [ ] **3.6** Implement `main.js` — orchestrate all modules, wire up event listeners, manage global session state
-- [ ] **3.7** Add responsive CSS styling — clean, professional interview UI (webcam feed, sidebar emotion panel, transcript box)
+- [x] **3.1** Scaffold single-page frontend (`frontend/`) — `index.html`, `style.css`, `main.js`, `mediapipe_handler.js`, `websocket_client.js`, `audio_handler.js`, `ui_controller.js`
+- [x] **3.2** Implement `mediapipe_handler.js` — load MediaPipe Face Mesh JS, initialize camera, extract 468 landmark coordinates per frame, output normalized JSON
+- [x] **3.3** Implement `audio_handler.js` — access microphone via Web Audio API, chunk audio into configurable windows (e.g., 3-second sliding windows), encode as base64 PCM/WAV
+- [x] **3.4** Implement `websocket_client.js` — manage WebSocket connection lifecycle, send/receive typed messages, handle reconnect logic with exponential backoff
+- [x] **3.5** Implement `ui_controller.js` — interview start/stop controls, live emotion display panel, confidence score bars, real-time transcript feed
+- [x] **3.6** Implement `main.js` — orchestrate all modules, wire up event listeners, manage global session state
+- [x] **3.7** Add responsive CSS styling — clean, professional interview UI (webcam feed, sidebar emotion panel, transcript box)
 - [ ] **3.8** Test end-to-end: browser connects to Django Channels, MediaPipe landmarks stream over WebSocket, audio chunks received by backend
 
 ---

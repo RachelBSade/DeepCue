@@ -81,7 +81,19 @@ Set up the full project skeleton: directory structure, dependency files, environ
 ---
 
 ## Phase 3 — JS Web Frontend
-**Status: Not started**
+**Status: Complete (3.8 deferred — requires full backend running)**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `frontend/index.html` | SPA shell: webcam feed, emotion panel (8 bars), Hebrew transcript, controls |
+| `frontend/style.css` | Dark theme, per-emotion colour palette, responsive grid, RTL transcript support |
+| `frontend/mediapipe_handler.js` | `MediaPipeHandler`: loads Face Mesh from CDN, emits 468 normalised {x,y,z} landmarks per frame |
+| `frontend/audio_handler.js` | `AudioHandler`: buffers 3 s PCM chunks, encodes 16-bit mono WAV, emits base64 via callback |
+| `frontend/websocket_client.js` | `WebSocketClient`: typed send methods, handler registry, exponential backoff reconnect (5 retries, cap 30 s) |
+| `frontend/ui_controller.js` | `UIController`: all DOM mutations — state transitions, emotion bars, transcript feed, timer, errors |
+| `frontend/main.js` | Orchestrator: generates `session_id`, wires all modules, drives idle→connecting→active→ended state machine |
 
 ---
 
