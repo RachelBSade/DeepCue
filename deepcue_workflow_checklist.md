@@ -65,14 +65,14 @@
 
 ## PHASE 4 — Celery Task Queue & Inference Orchestration
 
-- [ ] **4.1** Write `tasks/video_tasks.py` — `process_video_frame` Celery task (receive landmark JSON → call video pipeline → push result to Channels group)
-- [ ] **4.2** Write `tasks/audio_tasks.py` — `process_audio_chunk` Celery task (receive base64 audio → call audio pipeline → push result to Channels group)
-- [ ] **4.3** Write `tasks/text_tasks.py` — `process_transcript_segment` Celery task (receive audio → Whisper transcription → call text pipeline → push result to Channels group)
-- [ ] **4.4** Write `tasks/fusion_tasks.py` — `run_fusion` Celery task (collect latest modality outputs from Redis cache → call fusion pipeline → push unified `emotion_result` to Channels group → write to MongoDB)
-- [ ] **4.5** Implement result caching strategy in Redis — store latest per-modality scores keyed by `session_id` for fusion aggregation
-- [ ] **4.6** Configure Celery task routing — assign tasks to dedicated queues (`video_queue`, `audio_queue`, `fusion_queue`)
-- [ ] **4.7** Write `tasks/report_tasks.py` — `generate_report` Celery task (triggered on `session_end`, pulls MongoDB data, calls reporting module)
-- [ ] **4.8** Add Celery Beat schedule stubs for periodic fusion triggering (e.g., every 1s during active session)
+- [x] **4.1** Write `tasks/video_tasks.py` — `process_video_frame` Celery task (receive landmark JSON → call video pipeline → push result to Channels group)
+- [x] **4.2** Write `tasks/audio_tasks.py` — `process_audio_chunk` Celery task (receive base64 audio → call audio pipeline → push result to Channels group)
+- [x] **4.3** Write `tasks/text_tasks.py` — `process_transcript_segment` Celery task (receive audio → Whisper transcription → call text pipeline → push result to Channels group)
+- [x] **4.4** Write `tasks/fusion_tasks.py` — `run_fusion` Celery task (collect latest modality outputs from Redis cache → call fusion pipeline → push unified `emotion_result` to Channels group → write to MongoDB)
+- [x] **4.5** Implement result caching strategy in Redis — store latest per-modality scores keyed by `session_id` for fusion aggregation
+- [x] **4.6** Configure Celery task routing — assign tasks to dedicated queues (`video_queue`, `audio_queue`, `fusion_queue`)
+- [x] **4.7** Write `tasks/report_tasks.py` — `generate_report` Celery task (triggered on `session_end`, pulls MongoDB data, calls reporting module)
+- [x] **4.8** Add Celery Beat schedule stubs for periodic fusion triggering (e.g., every 1s during active session)
 
 ---
 

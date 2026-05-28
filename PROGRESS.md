@@ -98,7 +98,21 @@ Set up the full project skeleton: directory structure, dependency files, environ
 ---
 
 ## Phase 4 — Celery Task Queue & Inference Orchestration
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/tasks/video_tasks.py` | `process_video_frame`: runs VideoEmotionPipeline, caches score, triggers fusion |
+| `backend/tasks/audio_tasks.py` | `process_audio_chunk`: decodes WAV, runs AudioEmotionPipeline, caches score |
+| `backend/tasks/text_tasks.py` | `process_transcript_segment`: Whisper transcription + XLM-RoBERTa score, pushes transcript_update |
+| `backend/tasks/fusion_tasks.py` | `run_fusion`: reads 3 Redis scores, runs FusionPipeline, writes EmotionFrame to MongoDB, pushes emotion_result |
+| `backend/tasks/report_tasks.py` | `generate_report`: pulls MongoDB data, generates PDF, stores in GridFS, pushes final session_ended |
+| `backend/deepcue_backend/celery.py` | Celery app + Beat schedule stub (frame-driven fusion; Beat heartbeat commented out) |
+
+### Also restored (missing from dev branch)
+All Phase 1 files: `manage.py`, `settings/`, `asgi.py`, `urls.py`, `db/`, `apps/*/apps.py`, `__init__.py` files.
 
 ---
 
