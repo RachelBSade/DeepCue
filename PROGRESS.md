@@ -43,12 +43,40 @@ Set up the full project skeleton: directory structure, dependency files, environ
 ---
 
 ## Phase 1 — Django Project Bootstrap
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/manage.py` | Django CLI entry point; defaults to `settings.local` |
+| `backend/deepcue_backend/__init__.py` | Exposes `celery_app` so `-A deepcue_backend` resolves |
+| `backend/deepcue_backend/celery.py` | Celery app; autodiscovers tasks from all INSTALLED_APPS |
+| `backend/deepcue_backend/settings/base.py` | All shared settings: apps, middleware, Channels, Celery, MongoDB, inference paths |
+| `backend/deepcue_backend/settings/local.py` | Dev overrides: DEBUG=True, CORS open |
+| `backend/deepcue_backend/settings/production.py` | Production overrides: HTTPS, strict CORS, HSTS |
+| `backend/deepcue_backend/asgi.py` | ProtocolTypeRouter: HTTP → Django, WebSocket → Channels |
+| `backend/deepcue_backend/urls.py` | Root URL router |
+| `backend/apps/sessions_app/apps.py` | Session lifecycle app config |
+| `backend/apps/inference/apps.py` | Inference pipeline app config |
+| `backend/apps/reporting/apps.py` | PDF reporting app config |
+| `backend/db/mongo_client.py` | `sync_db` (pymongo) and `async_db` (motor) singletons |
+| `backend/db/schemas.py` | TypedDicts: `InterviewSession`, `EmotionFrame`, `TranscriptSegment` |
+| `backend/apps/sessions_app/views.py` | `GET /api/health/` — probes Django, Redis, MongoDB |
+| `backend/apps/sessions_app/urls.py` | URL patterns for sessions_app |
 
 ---
 
 ## Phase 2 — WebSocket Protocol & Django Channels Consumer
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/sessions_app/protocol.py` | Full WS message protocol: type constants + TypedDict schemas for all inbound/outbound messages |
+| `backend/apps/sessions_app/consumers.py` | `InterviewConsumer`: connect/disconnect/receive, all 5 inbound handlers, 4 outbound group handlers, `interviewer_audio` stub |
+| `backend/apps/sessions_app/routing.py` | WebSocket URL pattern `ws/interview/<session_id>/` (UUID4 regex) |
 
 ---
 

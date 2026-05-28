@@ -25,28 +25,28 @@
 
 ## PHASE 1 — Django Project Bootstrap
 
-- [ ] **1.1** Scaffold Django project (`deepcue_backend/`) with `settings.py` split into `base.py`, `local.py`, `production.py`
-- [ ] **1.2** Configure `INSTALLED_APPS` — add `channels`, `django_celery_results`, and all internal apps (`sessions_app`, `inference`, `reporting`)
-- [ ] **1.3** Configure Django Channels with Redis channel layer (`CHANNEL_LAYERS` in settings)
-- [ ] **1.4** Configure Celery (`celery.py`) with Redis as broker and result backend
-- [ ] **1.5** Configure MongoDB Atlas connection via `pymongo` (utility module `db/mongo_client.py`)
-- [ ] **1.6** Define MongoDB document schemas (interview session, emotion frame, transcript segment) as Python `TypedDict` structures
-- [ ] **1.7** Write Django `urls.py` root router + `asgi.py` with Channels routing
-- [ ] **1.8** Write a basic health-check HTTP endpoint (`GET /api/health/`) returning service status (Django, Redis, MongoDB)
+- [x] **1.1** Scaffold Django project (`deepcue_backend/`) with `settings.py` split into `base.py`, `local.py`, `production.py`
+- [x] **1.2** Configure `INSTALLED_APPS` — add `channels`, `django_celery_results`, and all internal apps (`sessions_app`, `inference`, `reporting`)
+- [x] **1.3** Configure Django Channels with Redis channel layer (`CHANNEL_LAYERS` in settings)
+- [x] **1.4** Configure Celery (`celery.py`) with Redis as broker and result backend
+- [x] **1.5** Configure MongoDB Atlas connection via `pymongo` (utility module `db/mongo_client.py`)
+- [x] **1.6** Define MongoDB document schemas (interview session, emotion frame, transcript segment) as Python `TypedDict` structures
+- [x] **1.7** Write Django `urls.py` root router + `asgi.py` with Channels routing
+- [x] **1.8** Write a basic health-check HTTP endpoint (`GET /api/health/`) returning service status (Django, Redis, MongoDB)
 
 ---
 
 ## PHASE 2 — WebSocket Protocol & Django Channels Consumer
 
-- [ ] **2.1** Design and document the full WebSocket message protocol (all message `type` fields: `session_start`, `video_frame`, `audio_chunk`, `transcript_segment`, `emotion_result`, `session_end`, `interviewer_audio` [stubbed], `error`)
-- [ ] **2.2** Write `consumers.py` — `InterviewConsumer` (AsyncWebsocketConsumer) handling connection lifecycle (`connect`, `disconnect`, `receive`)
-- [ ] **2.3** Implement `session_start` handler — creates MongoDB session document, returns `session_id`
-- [ ] **2.4** Implement `video_frame` handler — validates incoming MediaPipe JSON payload, dispatches Celery task
-- [ ] **2.5** Implement `audio_chunk` handler — validates base64-encoded audio payload, dispatches Celery task
-- [ ] **2.6** Implement `session_end` handler — triggers report generation task, finalizes MongoDB document
-- [ ] **2.7** Implement `error` handler and graceful disconnect with session cleanup
-- [ ] **2.8** Write `routing.py` — WebSocket URL pattern (`ws/interview/<session_id>/`)
-- [ ] **2.9** [s] Stub `interviewer_audio` outbound message type in protocol (Phase 6 placeholder)
+- [x] **2.1** Design and document the full WebSocket message protocol (all message `type` fields: `session_start`, `video_frame`, `audio_chunk`, `transcript_segment`, `emotion_result`, `session_end`, `interviewer_audio` [stubbed], `error`)
+- [x] **2.2** Write `consumers.py` — `InterviewConsumer` (AsyncWebsocketConsumer) handling connection lifecycle (`connect`, `disconnect`, `receive`)
+- [x] **2.3** Implement `session_start` handler — creates MongoDB session document, returns `session_id`
+- [x] **2.4** Implement `video_frame` handler — validates incoming MediaPipe JSON payload, dispatches Celery task
+- [x] **2.5** Implement `audio_chunk` handler — validates base64-encoded audio payload, dispatches Celery task
+- [x] **2.6** Implement `session_end` handler — triggers report generation task, finalizes MongoDB document
+- [x] **2.7** Implement `error` handler and graceful disconnect with session cleanup
+- [x] **2.8** Write `routing.py` — WebSocket URL pattern (`ws/interview/<session_id>/`)
+- [x] **2.9** [s] Stub `interviewer_audio` outbound message type in protocol (Phase 6 placeholder)
 
 ---
 
