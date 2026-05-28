@@ -43,7 +43,34 @@ Set up the full project skeleton: directory structure, dependency files, environ
 ---
 
 ## Phase 1 — Django Project Bootstrap
-**Status: Not started**
+**Status: Complete**
+
+### What was done (1.1–1.5)
+Scaffolded the full Django project package with split settings, Celery app, MongoDB client, and all three app configs. No application logic yet — this is pure project wiring.
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/manage.py` | Django CLI entry point; defaults to `settings.local` |
+| `backend/deepcue_backend/__init__.py` | Exposes `celery_app` so `-A deepcue_backend` resolves |
+| `backend/deepcue_backend/celery.py` | Celery app; autodiscovers tasks from all INSTALLED_APPS |
+| `backend/deepcue_backend/settings/__init__.py` | Makes `settings/` a Python package |
+| `backend/deepcue_backend/settings/base.py` | All shared settings: apps, middleware, Channels, Celery, MongoDB, inference paths |
+| `backend/deepcue_backend/settings/local.py` | Dev overrides: DEBUG=True, CORS open |
+| `backend/deepcue_backend/settings/production.py` | Production overrides: HTTPS, strict CORS, HSTS |
+| `backend/apps/__init__.py` | Makes `apps/` a Python package |
+| `backend/apps/sessions_app/__init__.py` + `apps.py` | Session lifecycle app registration |
+| `backend/apps/inference/__init__.py` + `apps.py` | Inference pipeline app registration |
+| `backend/apps/reporting/__init__.py` + `apps.py` | PDF reporting app registration |
+| `backend/tasks/__init__.py` | Makes `tasks/` a Python package for Celery autodiscovery |
+| `backend/db/__init__.py` | Makes `db/` a Python package |
+| `backend/db/mongo_client.py` | `sync_db` (pymongo) and `async_db` (motor) singletons; lazy-initialised |
+| `backend/db/schemas.py` | TypedDicts: `InterviewSession`, `EmotionFrame`, `TranscriptSegment`, `EmotionScores` |
+| `backend/deepcue_backend/asgi.py` | ProtocolTypeRouter: HTTP → Django, WebSocket → Channels (WS patterns imported from Phase 2) |
+| `backend/deepcue_backend/urls.py` | Root URL router: `admin/`, `api/` → sessions_app |
+| `backend/apps/sessions_app/views.py` | `GET /api/health/` — probes Django, Redis, MongoDB; returns 200 or 503 |
+| `backend/apps/sessions_app/urls.py` | URL patterns for sessions_app (`api/health/`) |
 
 ---
 

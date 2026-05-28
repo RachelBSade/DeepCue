@@ -1,0 +1,203 @@
+"""
+Base Django settings for DeepCue.
+
+All environment-specific settings files (local.py, production.py) inherit
+from this module. Values are read from environment variables; see .env.example
+for the full list of required variables.
+"""
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+
+# BASE_DIR resolves to the backend/ directory (parent of deepcue_backend/).
+BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+
+SECRET_KEY: str = os.environ["DJANGO_SECRET_KEY"]
+DEBUG: bool = False
+ALLOWED_HOSTS: list[str] = []
+
+# ---------------------------------------------------------------------------
+# Application definition
+# ---------------------------------------------------------------------------
+
+DJANGO_APPS: list[str] = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+]
+
+THIRD_PARTY_APPS: list[str] = [
+    "channels",
+    "django_celery_results",
+    "corsheaders",
+]
+
+LOCAL_APPS: list[str] = [
+    "apps.sessions_app",
+    "apps.inference",
+    "apps.reporting",
+]
+
+INSTALLED_APPS: list[str] = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
+
+MIDDLEWARE: list[str] = [
+    # CorsMiddleware must be as high as possible, before CommonMiddleware.
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+# ---------------------------------------------------------------------------
+# Routing
+# ---------------------------------------------------------------------------
+
+ROOT_URLCONF: str = "deepcue_backend.urls"
+ASGI_APPLICATION: str = "deepcue_backend.asgi.application"
+
+# ---------------------------------------------------------------------------
+# Templates
+# ---------------------------------------------------------------------------
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+# Django's own internals (auth, admin, celery results) use SQLite.
+# All application data (sessions, emotion frames, transcripts) lives in
+# MongoDB, configured below under the MONGODB_* settings.
+
+DATABASES: dict = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Password validation
+# ---------------------------------------------------------------------------
+
+AUTH_PASSWORD_VALIDATORS: list[dict] = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# ---------------------------------------------------------------------------
+# Internationalisation
+# ---------------------------------------------------------------------------
+
+LANGUAGE_CODE: str = "he"
+TIME_ZONE: str = "Asia/Jerusalem"
+USE_I18N: bool = True
+USE_TZ: bool = True
+
+# ---------------------------------------------------------------------------
+# Static files
+# ---------------------------------------------------------------------------
+
+STATIC_URL: str = "/static/"
+DEFAULT_AUTO_FIELD: str = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Django Channels — Redis channel layer (1.3)
+# ---------------------------------------------------------------------------
+
+CHANNEL_LAYERS: dict = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("CHANNELS_REDIS_URL", "redis://localhost:6379/2")],
+        },
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Celery (1.4)
+# ---------------------------------------------------------------------------
+
+CELERY_BROKER_URL: str = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND: str = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_RESULT_EXTENDED: bool = True
+CELERY_TASK_SERIALIZER: str = "json"
+CELERY_RESULT_SERIALIZER: str = "json"
+CELERY_ACCEPT_CONTENT: list[str] = ["json"]
+CELERY_TIMEZONE: str = "Asia/Jerusalem"
+CELERY_TASK_TRACK_STARTED: bool = True
+
+# Task routing — each pipeline type gets its own queue for independent scaling.
+CELERY_TASK_ROUTES: dict = {
+    "tasks.video_tasks.*": {"queue": "video_queue"},
+    "tasks.audio_tasks.*": {"queue": "audio_queue"},
+    "tasks.text_tasks.*":  {"queue": "audio_queue"},  # co-located with audio worker
+    "tasks.fusion_tasks.*": {"queue": "fusion_queue"},
+    "tasks.report_tasks.*": {"queue": "fusion_queue"},
+}
+
+# ---------------------------------------------------------------------------
+# MongoDB — application data (1.5)
+# ---------------------------------------------------------------------------
+
+MONGODB_URI: str = os.environ["MONGODB_URI"]
+MONGODB_DB_NAME: str = os.environ.get("MONGODB_DB_NAME", "deepcue")
+
+# ---------------------------------------------------------------------------
+# Inference pipeline configuration
+# ---------------------------------------------------------------------------
+# These are read by pipeline classes at startup to locate ONNX weight files.
+
+VIDEO_MODEL_PATH: str = os.environ.get(
+    "VIDEO_MODEL_PATH", "models/video/efficientnet_lstm.onnx"
+)
+AUDIO_MODEL_PATH: str = os.environ.get(
+    "AUDIO_MODEL_PATH", "models/audio/wav2vec2_classifier.onnx"
+)
+TEXT_MODEL_PATH: str = os.environ.get(
+    "TEXT_MODEL_PATH", "models/text/xlm_roberta_sentiment.onnx"
+)
+FUSION_MODEL_PATH: str = os.environ.get(
+    "FUSION_MODEL_PATH", "models/fusion/cross_modal_transformer.onnx"
+)
+WHISPER_MODEL_SIZE: str = os.environ.get("WHISPER_MODEL_SIZE", "base")
+WHISPER_CACHE_DIR: str = os.environ.get("WHISPER_CACHE_DIR", "models/text/whisper_cache")
+VIDEO_LSTM_WINDOW_SIZE: int = int(os.environ.get("VIDEO_LSTM_WINDOW_SIZE", "30"))
+AUDIO_CHUNK_SECONDS: int = int(os.environ.get("AUDIO_CHUNK_SECONDS", "3"))

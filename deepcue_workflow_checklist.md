@@ -25,14 +25,14 @@
 
 ## PHASE 1 — Django Project Bootstrap
 
-- [ ] **1.1** Scaffold Django project (`deepcue_backend/`) with `settings.py` split into `base.py`, `local.py`, `production.py`
-- [ ] **1.2** Configure `INSTALLED_APPS` — add `channels`, `django_celery_results`, and all internal apps (`sessions_app`, `inference`, `reporting`)
-- [ ] **1.3** Configure Django Channels with Redis channel layer (`CHANNEL_LAYERS` in settings)
-- [ ] **1.4** Configure Celery (`celery.py`) with Redis as broker and result backend
-- [ ] **1.5** Configure MongoDB Atlas connection via `pymongo` (utility module `db/mongo_client.py`)
-- [ ] **1.6** Define MongoDB document schemas (interview session, emotion frame, transcript segment) as Python `TypedDict` structures
-- [ ] **1.7** Write Django `urls.py` root router + `asgi.py` with Channels routing
-- [ ] **1.8** Write a basic health-check HTTP endpoint (`GET /api/health/`) returning service status (Django, Redis, MongoDB)
+- [x] **1.1** Scaffold Django project (`deepcue_backend/`) with `settings.py` split into `base.py`, `local.py`, `production.py`
+- [x] **1.2** Configure `INSTALLED_APPS` — add `channels`, `django_celery_results`, and all internal apps (`sessions_app`, `inference`, `reporting`)
+- [x] **1.3** Configure Django Channels with Redis channel layer (`CHANNEL_LAYERS` in settings)
+- [x] **1.4** Configure Celery (`celery.py`) with Redis as broker and result backend
+- [x] **1.5** Configure MongoDB Atlas connection via `pymongo` (utility module `db/mongo_client.py`)
+- [x] **1.6** Define MongoDB document schemas (interview session, emotion frame, transcript segment) as Python `TypedDict` structures
+- [x] **1.7** Write Django `urls.py` root router + `asgi.py` with Channels routing
+- [x] **1.8** Write a basic health-check HTTP endpoint (`GET /api/health/`) returning service status (Django, Redis, MongoDB)
 
 ---
 
@@ -168,4 +168,4 @@
 
 ---
 
-*Last updated: Phase 0 complete (0.1–0.6). Awaiting Lead Developer approval to begin Phase 1 (Django project bootstrap).*
+*Last updated: Phase 1 complete (1.1–1.8). Awaiting Lead Developer approval to begin Phase 2 (WebSocket Protocol & Django Channels Consumer).*
