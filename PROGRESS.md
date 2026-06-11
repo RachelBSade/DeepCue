@@ -151,7 +151,19 @@ All Phase 1 files: `manage.py`, `settings/`, `asgi.py`, `urls.py`, `db/`, `apps/
 ---
 
 ## Phase 7 — PDF Reporting (ReportLab)
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/reporting/report_generator.py` | `InterviewReportGenerator.generate()` — 5-section A4 PDF: executive summary, emotion timeline chart, text insights (Hebrew RTL), model performance table, rule-based recommendations |
+| `backend/apps/reporting/pdf_storage.py` | `store_report()` / `retrieve_report()` — GridFS read/write; idempotent (deletes old file before re-storing) |
+| `backend/apps/reporting/views.py` | `download_report()` — `GET /api/report/<session_id>/` — streams PDF bytes; 404 if not found |
+| `backend/apps/reporting/urls.py` | URL pattern for the download endpoint |
+
+### Also updated
+`backend/deepcue_backend/urls.py` — added `path("api/", include("apps.reporting.urls"))`
 
 ---
 

@@ -123,15 +123,15 @@
 
 ## PHASE 7 — PDF Reporting (ReportLab)
 
-- [ ] **7.1** Write `reporting/report_generator.py` — `InterviewReportGenerator` class with `generate(session_id: str) -> bytes` interface
-- [ ] **7.2** Implement **Section 1: Executive Summary** — candidate name, session date/duration, dominant emotion, overall confidence score
-- [ ] **7.3** Implement **Section 2: Emotion Timeline** — line/area chart (ReportLab Drawing) of emotion scores over session time
-- [ ] **7.4** Implement **Section 3: Text-Based Insights** — top uncertainty phrases, sentiment arc, Hebrew transcript excerpts (RTL text rendering)
-- [ ] **7.5** Implement **Section 4: Model Performance Metrics** — per-modality confidence distributions, fusion model output breakdown
-- [ ] **7.6** Implement **Section 5: Recommendations** — rule-based text snippets triggered by emotion thresholds (e.g., high anxiety → breathing tips)
-- [ ] **7.7** Add DeepCue branding — header logo placeholder, footer with generation timestamp
-- [ ] **7.8** Write `reporting/pdf_storage.py` — save generated PDF bytes to MongoDB GridFS and return download URL
-- [ ] **7.9** Write Django HTTP endpoint `GET /api/report/<session_id>/` to stream PDF to browser
+- [x] **7.1** Write `reporting/report_generator.py` — `InterviewReportGenerator` class with `generate(session_id: str) -> bytes` interface
+- [x] **7.2** Implement **Section 1: Executive Summary** — candidate name, session date/duration, dominant emotion, overall confidence score
+- [x] **7.3** Implement **Section 2: Emotion Timeline** — line/area chart (ReportLab Drawing) of emotion scores over session time
+- [x] **7.4** Implement **Section 3: Text-Based Insights** — top uncertainty phrases, sentiment arc, Hebrew transcript excerpts (RTL text rendering)
+- [x] **7.5** Implement **Section 4: Model Performance Metrics** — per-modality confidence distributions, fusion model output breakdown
+- [x] **7.6** Implement **Section 5: Recommendations** — rule-based text snippets triggered by emotion thresholds (e.g., high anxiety → breathing tips)
+- [x] **7.7** Add DeepCue branding — header logo placeholder, footer with generation timestamp
+- [x] **7.8** Write `reporting/pdf_storage.py` — save generated PDF bytes to MongoDB GridFS and return download URL
+- [x] **7.9** Write Django HTTP endpoint `GET /api/report/<session_id>/` to stream PDF to browser
 
 ---
 
