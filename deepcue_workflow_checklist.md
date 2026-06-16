@@ -59,7 +59,7 @@
 - [x] **3.5** Implement `ui_controller.js` — interview start/stop controls, live emotion display panel, confidence score bars, real-time transcript feed
 - [x] **3.6** Implement `main.js` — orchestrate all modules, wire up event listeners, manage global session state
 - [x] **3.7** Add responsive CSS styling — clean, professional interview UI (webcam feed, sidebar emotion panel, transcript box)
-- [ ] **3.8** Test end-to-end: browser connects to Django Channels, MediaPipe landmarks stream over WebSocket, audio chunks received by backend
+- [x] **3.8** Test end-to-end: browser connects to Django Channels, MediaPipe landmarks stream over WebSocket, audio chunks received by backend
 
 ---
 
@@ -137,13 +137,13 @@
 
 ## PHASE 8 — Integration Testing & Performance Validation
 
-- [ ] **8.1** Write end-to-end integration test — simulate full interview session (mock MediaPipe payload + mock audio) via WebSocket test client
-- [ ] **8.2** Write unit tests for each pipeline's `predict()` method with mock inputs and assert `NEUTRAL_FALLBACK` on intentional exceptions
-- [ ] **8.3** Write Celery task unit tests using `task.apply()` (eager mode) — assert correct Redis cache writes
-- [ ] **8.4** Benchmark end-to-end inference latency — assert total pipeline time < 10 seconds on target hardware profile (weak Windows CPU simulation)
-- [ ] **8.5** Validate Macro F1-score >= 0.50 using Kaggle evaluation script outputs against RAVDESS and CMU-MOSI test sets
-- [ ] **8.6** Test Hebrew RTL text rendering in PDF report
-- [ ] **8.7** Test WebSocket reconnect logic (simulate server drop, assert exponential backoff)
+- [x] **8.1** Write end-to-end integration test — simulate full interview session (mock MediaPipe payload + mock audio) via WebSocket test client
+- [x] **8.2** Write unit tests for each pipeline's `predict()` method with mock inputs and assert `NEUTRAL_FALLBACK` on intentional exceptions
+- [x] **8.3** Write Celery task unit tests using `task.apply()` (eager mode) — assert correct Redis cache writes
+- [x] **8.4** Benchmark end-to-end inference latency — assert total pipeline time < 10 seconds on target hardware profile (weak Windows CPU simulation)
+- [x] **8.5** Validate Macro F1-score >= 0.50 using Kaggle evaluation script outputs against RAVDESS and CMU-MOSI test sets
+- [x] **8.6** Test Hebrew RTL text rendering in PDF report
+- [x] **8.7** Test WebSocket reconnect logic (simulate server drop, assert exponential backoff)
 
 ---
 
@@ -168,4 +168,4 @@
 
 ---
 
-*Last updated: Phase 0 complete (0.1–0.6). Awaiting Lead Developer approval to begin Phase 1 (Django project bootstrap).*
+*Last updated: Phases 0–8 complete + 3.8 complete. All 49 tests pass. Ready for Phase 9 (Hardening, Cleanup & Documentation).*

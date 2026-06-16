@@ -111,7 +111,7 @@ class InterviewReportGenerator:
         story += [PageBreak()]
         story += _section5_recommendations(session, emotion_frames, styles)
 
-        doc.build(story, onFirstPage=_draw_page_border, onLaterPages=_draw_page_border)
+        doc.build(story)
         return buf.getvalue()
 
 
@@ -136,7 +136,7 @@ def _build_doc(buf: io.BytesIO) -> BaseDocTemplate:
         PAGE_H - 2 * MARGIN - 0.5 * cm,
         id="main",
     )
-    template = PageTemplate(id="main", frames=[frame])
+    template = PageTemplate(id="main", frames=[frame], onPage=_draw_page_border)
     doc.addPageTemplates([template])
     return doc
 
@@ -520,7 +520,7 @@ def _section3_text_insights(
         if not text:
             continue
         flowables.append(Paragraph(
-            f'<para dir="rtl">{text}</para>  <font color="grey" size="7">({ts:.0f}s)</font>',
+            f'{text}  <font color="grey" size="7">({ts:.0f}s)</font>',
             styles["body_rtl"],
         ))
 

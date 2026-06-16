@@ -16,6 +16,9 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 from django.conf import settings
 
+from db.mongo_client import get_sync_db
+from db.schemas import EmotionFrame
+
 logger = logging.getLogger(__name__)
 
 # Redis key patterns written by the three modality tasks (4.5).
@@ -45,8 +48,6 @@ def run_fusion(
       5. Increment the session frame_count in MongoDB.
     """
     from apps.inference.fusion_pipeline import FusionPipeline
-    from db.mongo_client import get_sync_db
-    from db.schemas import EmotionFrame
 
     r = _get_redis()
 

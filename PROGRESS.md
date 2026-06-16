@@ -168,7 +168,53 @@ All Phase 1 files: `manage.py`, `settings/`, `asgi.py`, `urls.py`, `db/`, `apps/
 ---
 
 ## Phase 8 — Integration Testing & Performance Validation
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/deepcue_backend/settings/test.py` | Test settings: in-memory channel layer, Celery eager mode, no-op model paths |
+| `backend/pytest.ini` | pytest configuration: asyncio_mode=auto, testpaths=tests, DJANGO_SETTINGS_MODULE |
+| `backend/tests/__init__.py` | Test package marker |
+| `backend/tests/conftest.py` | Shared fixtures: `wav_bytes`, `landmarks`, `fake_session_id`, `make_wav_bytes()`, `make_landmarks()` |
+| `backend/tests/test_pipelines.py` | Unit tests for all 4 pipelines (8.2): NEUTRAL_FALLBACK, score bounds, never-raise, FusionPipeline fallback dict |
+| `backend/tests/test_celery_tasks.py` | Celery eager-mode tests (8.3): Redis key pattern, score value, MongoDB write, Channels group_send |
+| `backend/tests/test_websocket_consumer.py` | WS consumer integration tests (8.1): lifecycle, validation errors, reconnect constants (8.7) |
+| `backend/tests/test_pdf_report.py` | PDF generation tests (8.6): %PDF header, Hebrew RTL, 10s latency budget, GridFS mock |
+
+---
+
+## Phase 3.8 + Test Run — End-to-End Session Test & Bug Fixes
+**Status: Complete**
+
+### What was done
+Completed checklist item 3.8 (previously deferred) and ran the full test suite for the first time, fixing all failures discovered.
+
+### New file created
+
+| File | Purpose |
+|---|---|
+| `backend/tests/test_e2e_session.py` | End-to-end session flow test: connect → session_start → video_frame (468 landmarks) → audio_chunk (WAV) → session_end; all over in-memory Channels layer |
+
+### Bugs found and fixed
+
+| File | Bug | Fix |
+|---|---|---|
+| `backend/deepcue_backend/settings/test.py` | `DJANGO_SECRET_KEY` / `MONGODB_URI` env vars not set before base.py import caused `KeyError` | Added `os.environ.setdefault(...)` calls before the `from base import *` |
+| `backend/pytest.ini` | `from conftest import ...` in test files failed — `tests/` not on Python path | Added `tests` to `pythonpath` in pytest.ini |
+| `backend/tasks/video_tasks.py` | `run_fusion` imported inside function body — `@patch("tasks.video_tasks.run_fusion")` raised `AttributeError` | Moved import to module level |
+| `backend/tasks/fusion_tasks.py` | `get_sync_db` / `EmotionFrame` imported inside function body — `@patch` raised `AttributeError` | Moved imports to module level |
+| `backend/tasks/report_tasks.py` | `get_sync_db`, `store_report`, `InterviewReportGenerator` imported inside function body | Moved imports to module level |
+| `backend/tests/test_celery_tasks.py` | `channel_layer.group_send` was a plain `MagicMock` — `async_to_sync` raised `TypeError: can't be awaited` | Changed to `AsyncMock()` for `group_send` |
+| `backend/apps/reporting/report_generator.py` | `BaseDocTemplate.build()` doesn't accept `onFirstPage`/`onLaterPages` kwargs | Moved border callback to `PageTemplate(onPage=...)` |
+| `backend/apps/reporting/report_generator.py` | `<para dir="rtl">` is not valid ReportLab markup — raised `paraparser: syntax error` | Removed the `<para>` wrapper; RTL is handled by the `body_rtl` `ParagraphStyle` |
+| `backend/apps/reporting/pdf_storage.py` | `get_sync_db` and `GridFS` imported inside functions — `@patch` raised `AttributeError` | Moved imports to module level |
+
+### Final test result
+```
+49 passed, 2 warnings in 1.65s
+```
 
 ---
 

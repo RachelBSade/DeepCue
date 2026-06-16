@@ -12,6 +12,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
+from gridfs import GridFS, NoFile
+
+from db.mongo_client import get_sync_db
+
 logger = logging.getLogger(__name__)
 
 # URL prefix served by the Django report download endpoint (7.9).
@@ -31,9 +35,6 @@ def store_report(session_id: str, pdf_bytes: bytes) -> str:
     -------
     str — URL path to download the report, e.g. "/api/report/<session_id>/"
     """
-    from gridfs import GridFS
-    from db.mongo_client import get_sync_db
-
     db = get_sync_db()
     fs = GridFS(db)
 
@@ -62,9 +63,6 @@ def retrieve_report(session_id: str) -> bytes | None:
 
     Returns None if no report exists.
     """
-    from gridfs import GridFS, NoFile
-    from db.mongo_client import get_sync_db
-
     db = get_sync_db()
     fs = GridFS(db)
     filename = f"{session_id}.pdf"

@@ -13,6 +13,10 @@ from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
 
+from apps.reporting.pdf_storage import store_report
+from apps.reporting.report_generator import InterviewReportGenerator
+from db.mongo_client import get_sync_db
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,10 +35,6 @@ def generate_report(
       3. Store PDF in MongoDB GridFS via pdf_storage module.
       4. Push session_ended message with report_url to the browser.
     """
-    from apps.reporting.report_generator import InterviewReportGenerator
-    from apps.reporting.pdf_storage import store_report
-    from db.mongo_client import get_sync_db
-
     db = get_sync_db()
 
     session = db.interview_sessions.find_one({"session_id": session_id})

@@ -14,6 +14,8 @@ import redis
 from celery import shared_task
 from django.conf import settings
 
+from tasks.fusion_tasks import run_fusion  # noqa: E402 — after Celery app init
+
 logger = logging.getLogger(__name__)
 
 # Redis key pattern: deepcue:scores:<session_id>:video
@@ -40,10 +42,9 @@ def process_video_frame(
       4. Trigger the fusion task to re-evaluate the unified emotion state.
     """
     from apps.inference.video_pipeline import VideoEmotionPipeline
-    from tasks.fusion_tasks import run_fusion
 
     pipeline = VideoEmotionPipeline.get_instance()
-    score: float = pipeline.predict(landmarks, frame_index)
+    score: float = pipeline.predict(landmarks, frame_index, session_id)
 
     # Cache latest video score for this session.
     r = _get_redis()
