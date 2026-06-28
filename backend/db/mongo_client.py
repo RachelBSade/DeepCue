@@ -20,6 +20,7 @@ _async_client: motor.motor_asyncio.AsyncIOMotorClient | None = None
 
 
 def get_sync_db() -> "Database":
+    """Return the lazily-initialised pymongo Database singleton (Celery tasks, Django views)."""
     global _sync_client
     if _sync_client is None:
         _sync_client = pymongo.MongoClient(settings.MONGODB_URI)
@@ -27,6 +28,7 @@ def get_sync_db() -> "Database":
 
 
 def get_async_db() -> "AsyncIOMotorDatabase":
+    """Return the lazily-initialised motor AsyncIOMotorDatabase singleton (Channels consumers)."""
     global _async_client
     if _async_client is None:
         _async_client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URI)
@@ -34,7 +36,10 @@ def get_async_db() -> "AsyncIOMotorDatabase":
 
 
 class _AsyncDBProxy:
-    def __getattr__(self, name: str):
+    """Defers to get_async_db() on every attribute access, so the `async_db` module-level
+    singleton below always reflects the current client even if it's (re)initialised later."""
+
+    def __getattr__(self, name: str) -> object:
         return getattr(get_async_db(), name)
 
 

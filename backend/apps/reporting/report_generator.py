@@ -120,6 +120,7 @@ class InterviewReportGenerator:
 # ---------------------------------------------------------------------------
 
 def _build_doc(buf: io.BytesIO) -> BaseDocTemplate:
+    """Construct the A4 BaseDocTemplate with the single content frame and page-border callback."""
     doc = BaseDocTemplate(
         buf,
         pagesize=A4,
@@ -171,6 +172,7 @@ def _draw_page_border(canvas: Any, doc: Any) -> None:
 # ---------------------------------------------------------------------------
 
 def _build_styles() -> dict[str, ParagraphStyle]:
+    """Build the named ParagraphStyle palette shared by every report section."""
     base = getSampleStyleSheet()
     return {
         "h1": ParagraphStyle(
@@ -220,6 +222,7 @@ def _build_styles() -> dict[str, ParagraphStyle]:
 # ---------------------------------------------------------------------------
 
 def _section_header(styles: dict) -> list:
+    """Report title banner flowables, shared above all sections."""
     return [
         Spacer(1, 1.2 * cm),
         Paragraph("Interview Emotion Analysis Report", styles["h1"]),
@@ -236,6 +239,7 @@ def _section1_executive_summary(
     emotion_frames: list[dict[str, Any]],
     styles: dict,
 ) -> list:
+    """Section 1 flowables: candidate/session metadata table + emotion distribution chart."""
     flowables: list[Any] = [
         Paragraph("1. Executive Summary", styles["h2"]),
         Spacer(1, 3 * mm),
@@ -336,6 +340,7 @@ def _section2_emotion_timeline(
     emotion_frames: list[dict[str, Any]],
     styles: dict,
 ) -> list:
+    """Section 2 flowables: per-emotion confidence line chart over session time + legend."""
     flowables: list[Any] = [
         Paragraph("2. Emotion Timeline", styles["h2"]),
         Spacer(1, 3 * mm),
@@ -448,6 +453,7 @@ def _section3_text_insights(
     emotion_frames: list[dict[str, Any]],
     styles: dict,
 ) -> list:
+    """Section 3 flowables: sentiment arc, low-confidence phrases, and Hebrew transcript excerpts."""
     flowables: list[Any] = [
         Paragraph("3. Text-Based Insights", styles["h2"]),
         Spacer(1, 3 * mm),
@@ -535,6 +541,7 @@ def _section4_model_performance(
     emotion_frames: list[dict[str, Any]],
     styles: dict,
 ) -> list:
+    """Section 4 flowables: per-modality score statistics + fusion output breakdown table."""
     flowables: list[Any] = [
         Paragraph("4. Model Performance Metrics", styles["h2"]),
         Spacer(1, 3 * mm),
@@ -654,6 +661,7 @@ def _section5_recommendations(
     emotion_frames: list[dict[str, Any]],
     styles: dict,
 ) -> list:
+    """Section 5 flowables: rule-based tips triggered by per-emotion average score thresholds."""
     flowables: list[Any] = [
         Paragraph("5. Recommendations", styles["h2"]),
         Spacer(1, 3 * mm),
@@ -696,6 +704,7 @@ def _section5_recommendations(
 # ---------------------------------------------------------------------------
 
 def _average_fusion_scores(emotion_frames: list[dict]) -> dict[str, float]:
+    """Mean fusion score per emotion class across all frames (0.0 for every class if none)."""
     if not emotion_frames:
         return {e: 0.0 for e in EMOTION_CLASSES}
     acc: dict[str, float] = {e: 0.0 for e in EMOTION_CLASSES}
@@ -712,6 +721,7 @@ def _average_fusion_scores(emotion_frames: list[dict]) -> dict[str, float]:
 
 
 def _compute_overall_score(emotion_frames: list[dict]) -> float:
+    """Single headline confidence score: mean of average 'confident' and 'happy' scores."""
     avg = _average_fusion_scores(emotion_frames)
     return float(avg.get("confident", 0.0) + avg.get("happy", 0.0)) / 2.0
 
@@ -734,6 +744,7 @@ def _find_uncertain_segments(
 
 
 def _format_duration(seconds: float) -> str:
+    """Format a duration as `Hh MMm SSs`, omitting the hours segment when zero."""
     m, s = divmod(int(seconds), 60)
     h, m = divmod(m, 60)
     if h:

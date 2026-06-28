@@ -42,6 +42,7 @@ class InterviewSession(TypedDict):
     updated_at: datetime
     status: str
     candidate_name: str
+    candidate_email: Optional[str]
     duration_seconds: float
     frame_count: int
     dominant_emotion: str

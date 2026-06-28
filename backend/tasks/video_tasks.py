@@ -65,4 +65,5 @@ def process_video_frame(
 
 
 def _get_redis() -> redis.Redis:
+    """Open a Redis client against the Celery broker, used as the modality-score cache."""
     return redis.from_url(settings.CELERY_BROKER_URL, decode_responses=True)

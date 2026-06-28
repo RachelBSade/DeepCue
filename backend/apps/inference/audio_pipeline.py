@@ -95,6 +95,7 @@ class AudioEmotionPipeline:
             return NEUTRAL_FALLBACK
 
     def _predict(self, audio_bytes: bytes, sample_rate: int) -> float:
+        """Run the loaded ONNX session on raw audio bytes; raises on failure (caller handles fallback)."""
         if self._session is None:
             return NEUTRAL_FALLBACK
 

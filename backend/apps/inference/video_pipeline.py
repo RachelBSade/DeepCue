@@ -124,6 +124,7 @@ class VideoEmotionPipeline:
         frame_index: int,
         session_id: str,
     ) -> float:
+        """Run the loaded ONNX session on a buffered landmark window; raises on failure (caller handles fallback)."""
         if self._session is None:
             return NEUTRAL_FALLBACK
 

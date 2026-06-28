@@ -149,12 +149,12 @@
 
 ## PHASE 9 — Hardening, Cleanup & Documentation
 
-- [ ] **9.1** Add Django rate limiting on WebSocket consumer (`channels_ratelimit` or custom middleware)
-- [ ] **9.2** Add input validation / sanitization on all incoming WebSocket payloads (Pydantic schemas)
-- [ ] **9.3** Configure structured logging (Python `logging` module) across all pipelines and tasks — JSON format for production
-- [ ] **9.4** Write `DEPLOYMENT.md` — step-by-step guide for local dev setup and production deployment notes
-- [ ] **9.5** Final pass: ensure all Python files have complete type hints and docstrings; all JS modules have JSDoc comments
-- [ ] **9.6** Update this checklist to mark all completed items `[x]`
+- [x] **9.1** Add Django rate limiting on WebSocket consumer (`channels_ratelimit` or custom middleware) — custom per-connection token bucket in `apps/sessions_app/rate_limit.py`, applied to `video_frame`/`audio_chunk` handlers
+- [x] **9.2** Add input validation / sanitization on all incoming WebSocket payloads (Pydantic schemas) — `apps/sessions_app/validation.py`, wired into all inbound handlers in `consumers.py`
+- [x] **9.3** Configure structured logging (Python `logging` module) across all pipelines and tasks — JSON format for production — `deepcue_backend/logging_json.py` + `LOGGING` dict in `settings/base.py`, switches on `DJANGO_DEBUG`
+- [x] **9.4** Write `DEPLOYMENT.md` — step-by-step guide for local dev setup and production deployment notes
+- [x] **9.5** Final pass: ensure all Python files have complete type hints and docstrings; all JS modules have JSDoc comments
+- [x] **9.6** Update this checklist to mark all completed items `[x]`
 
 ---
 
@@ -168,4 +168,4 @@
 
 ---
 
-*Last updated: Phases 0–8 complete + 3.8 complete. All 49 tests pass. Ready for Phase 9 (Hardening, Cleanup & Documentation).*
+*Last updated: Phases 0–9 complete. All 49 tests pass. Remaining work: Kaggle model training/export (in progress) and Phase 10 (stubbed, out of scope).*

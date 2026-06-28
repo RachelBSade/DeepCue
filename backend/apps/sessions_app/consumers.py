@@ -24,11 +24,25 @@ from typing import Any
 
 from celery import current_app as celery_app
 from channels.generic.websocket import AsyncWebsocketConsumer
+from pydantic import ValidationError
 
 from db.mongo_client import async_db
 from db.schemas import InterviewSession
 
 from . import protocol
+from .rate_limit import (
+    AUDIO_CHUNK_CAPACITY,
+    AUDIO_CHUNK_RATE,
+    VIDEO_FRAME_CAPACITY,
+    VIDEO_FRAME_RATE,
+    TokenBucket,
+)
+from .validation import (
+    AudioChunkSchema,
+    SessionEndSchema,
+    SessionStartSchema,
+    VideoFrameSchema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +60,10 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         self.group_name: str = f"interview_{self.session_id}"
         self.session_active: bool = False
         self.session_start_time: datetime | None = None
+
+        # Per-connection rate limiters (9.1) — see rate_limit.py for chosen thresholds.
+        self._video_bucket = TokenBucket(VIDEO_FRAME_RATE, VIDEO_FRAME_CAPACITY)
+        self._audio_bucket = TokenBucket(AUDIO_CHUNK_RATE, AUDIO_CHUNK_CAPACITY)
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -96,7 +114,14 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         Idempotent: if the session document already exists (e.g. reconnect),
         the insert is skipped and a session_started confirmation is still sent.
         """
-        candidate_name: str = str(data.get("candidate_name", "Unknown")).strip() or "Unknown"
+        try:
+            msg = SessionStartSchema.model_validate(data)
+        except ValidationError as exc:
+            await self._send_error(f"session_start: invalid payload — {exc.errors()[0]['msg']}")
+            return
+
+        candidate_name: str = msg.candidate_name.strip() or "Unknown"
+        candidate_email: str | None = msg.candidate_email
         now = datetime.now(timezone.utc)
 
         session_doc: InterviewSession = {
@@ -105,6 +130,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             "updated_at":       now,
             "status":           "active",
             "candidate_name":   candidate_name,
+            "candidate_email":  candidate_email,
             "duration_seconds": 0.0,
             "frame_count":      0,
             "dominant_emotion": "neutral",
@@ -132,13 +158,18 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         Celery task. (2.4)
 
         Expected: `landmarks` is a list of exactly 468 {x, y, z} dicts.
+        Silently dropped (not an error) if the client exceeds the per-connection
+        rate limit — the browser sends frames frequently enough that an
+        occasional drop is harmless, unlike a flood of error messages back.
         """
-        landmarks = data.get("landmarks")
+        if not self._video_bucket.allow():
+            logger.warning("video_frame rate limit exceeded: session=%s", self.session_id)
+            return
 
-        if not isinstance(landmarks, list) or len(landmarks) != 468:
-            await self._send_error(
-                "video_frame: `landmarks` must be a list of exactly 468 points."
-            )
+        try:
+            msg = VideoFrameSchema.model_validate(data)
+        except ValidationError as exc:
+            await self._send_error(f"video_frame: invalid payload — {exc.errors()[0]['msg']}")
             return
 
         await asyncio.to_thread(
@@ -146,9 +177,9 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             "tasks.video_tasks.process_video_frame",
             {
                 "session_id":  self.session_id,
-                "frame_index": data.get("frame_index", 0),
-                "timestamp":   data.get("timestamp"),
-                "landmarks":   landmarks,
+                "frame_index": msg.frame_index,
+                "timestamp":   msg.timestamp,
+                "landmarks":   [p.model_dump() for p in msg.landmarks],
                 "group_name":  self.group_name,
             },
             "video_queue",
@@ -160,22 +191,25 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         pipeline task and the text (Whisper) pipeline task. (2.5)
 
         Both tasks receive the same payload; they run concurrently on
-        the same `audio_queue` worker.
+        the same `audio_queue` worker. Dropped silently if it exceeds the
+        per-connection rate limit (see _handle_video_frame for rationale).
         """
-        audio_data = data.get("audio_data")
+        if not self._audio_bucket.allow():
+            logger.warning("audio_chunk rate limit exceeded: session=%s", self.session_id)
+            return
 
-        if not isinstance(audio_data, str) or not audio_data:
-            await self._send_error(
-                "audio_chunk: `audio_data` must be a non-empty base64 string."
-            )
+        try:
+            msg = AudioChunkSchema.model_validate(data)
+        except ValidationError as exc:
+            await self._send_error(f"audio_chunk: invalid payload — {exc.errors()[0]['msg']}")
             return
 
         payload: dict[str, Any] = {
             "session_id":  self.session_id,
-            "chunk_index": data.get("chunk_index", 0),
-            "timestamp":   data.get("timestamp"),
-            "audio_data":  audio_data,
-            "sample_rate": int(data.get("sample_rate", 16000)),
+            "chunk_index": msg.chunk_index,
+            "timestamp":   msg.timestamp,
+            "audio_data":  msg.audio_data,
+            "sample_rate": msg.sample_rate,
             "group_name":  self.group_name,
         }
 
@@ -204,6 +238,12 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         `report_url: null`. When the report task completes, it pushes
         a second `session_ended` message via the group with the real URL.
         """
+        try:
+            SessionEndSchema.model_validate(data)
+        except ValidationError as exc:
+            await self._send_error(f"session_end: invalid payload — {exc.errors()[0]['msg']}")
+            return
+
         await self._finalize_session(status="completed")
 
         await asyncio.to_thread(

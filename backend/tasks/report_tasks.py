@@ -8,10 +8,12 @@ and pushes the download URL back to the browser via the Channels group.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
+from django.core.mail import EmailMessage
 
 from apps.reporting.pdf_storage import store_report
 from apps.reporting.report_generator import InterviewReportGenerator
@@ -60,13 +62,16 @@ def generate_report(
     report_url: str = store_report(session_id, pdf_bytes)
 
     # Persist report URL on the session document.
-    from datetime import datetime, timezone
     db.interview_sessions.update_one(
         {"session_id": session_id},
         {"$set": {"report_url": report_url, "updated_at": datetime.now(timezone.utc)}},
     )
 
     logger.info("Report stored: session=%s url=%s", session_id, report_url)
+
+    candidate_email = session.get("candidate_email")
+    if candidate_email:
+        _email_report(candidate_email, session.get("candidate_name", "Candidate"), pdf_bytes)
 
     # Push final session_ended with the real report URL to the browser.
     channel_layer = get_channel_layer()
@@ -78,3 +83,22 @@ def generate_report(
             "report_url": report_url,
         },
     )
+
+
+def _email_report(to_email: str, candidate_name: str, pdf_bytes: bytes) -> None:
+    """Send the PDF report as an attachment via Gmail SMTP. Failure is logged, not raised."""
+    try:
+        message = EmailMessage(
+            subject=f"DeepCue Interview Report — {candidate_name}",
+            body=(
+                f"Hi {candidate_name},\n\n"
+                "Your DeepCue interview emotion analysis report is attached.\n\n"
+                "— DeepCue"
+            ),
+            to=[to_email],
+        )
+        message.attach(f"deepcue_report_{candidate_name}.pdf", pdf_bytes, "application/pdf")
+        message.send(fail_silently=False)
+        logger.info("Report emailed to %s", to_email)
+    except Exception:
+        logger.exception("Failed to email report to %s", to_email)

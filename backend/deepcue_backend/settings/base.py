@@ -127,3 +127,49 @@ WHISPER_MODEL_SIZE: str = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_CACHE_DIR: str  = os.environ.get("WHISPER_CACHE_DIR",  "models/text/whisper_cache")
 VIDEO_LSTM_WINDOW_SIZE: int = int(os.environ.get("VIDEO_LSTM_WINDOW_SIZE", "30"))
 AUDIO_CHUNK_SECONDS: int    = int(os.environ.get("AUDIO_CHUNK_SECONDS", "3"))
+
+# --- Email (Gmail SMTP) — sends the PDF report to candidates who opt in -------
+EMAIL_BACKEND       = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST          = "smtp.gmail.com"
+EMAIL_PORT          = 587
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL  = EMAIL_HOST_USER
+
+# --- Logging (9.3) ------------------------------------------------------------
+# JSON in production (machine-parseable, e.g. for log aggregation); plain text
+# locally (human-readable in the terminal). Reads DJANGO_DEBUG directly from
+# the environment rather than the DEBUG setting, since this module runs before
+# local.py/production.py override DEBUG.
+_LOG_FORMATTER: str = "verbose" if os.environ.get("DJANGO_DEBUG", "False") == "True" else "json"
+
+LOGGING: dict = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "deepcue_backend.logging_json.JSONFormatter",
+        },
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": _LOG_FORMATTER,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        # "apps" catches apps.sessions_app.*, apps.inference.*, apps.reporting.*
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "apps":   {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "tasks":  {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}

@@ -26,42 +26,44 @@ django-celery-results==2.5.1      # Store Celery results in Django DB / Redis
 redis==5.0.8                      # Python Redis client (broker + cache)
 
 # --- Database ----------------------------------------------------------------
-pymongo==4.8.0                    # MongoDB Atlas sync driver (for reports, schemas)
-motor==3.5.0                      # Async MongoDB driver (for Channels consumers)
+pymongo>=4.15.2                   # MongoDB Atlas sync driver (for reports, schemas)
+motor>=3.5.0                      # Async MongoDB driver (for Channels consumers)
 
 # --- ML: Inference Runtime (CPU) --------------------------------------------
 # PyTorch CPU-only — pulled from --extra-index-url above
-torch==2.3.1+cpu
-torchaudio==2.3.1+cpu
+# Versions 2.9+ support Python 3.14
+torch==2.11.0+cpu
+torchaudio==2.11.0+cpu
 
 # ONNX Runtime — CPU inference for all quantized model weights
-onnxruntime==1.18.1
+onnxruntime>=1.18.1
 
 # HuggingFace: tokenizer + model config loading (weights loaded as ONNX, not PT)
-transformers==4.43.3
-sentencepiece==0.2.0              # Required by XLM-RoBERTa tokenizer
-protobuf==4.25.4                  # Required by transformers / tokenizer serialization
+transformers>=4.43.3
+sentencepiece>=0.2.0              # Required by XLM-RoBERTa tokenizer
+protobuf>=4.25.4                  # Required by transformers / tokenizer serialization
 
 # Whisper — Hebrew speech-to-text (base/small model, CPU-compatible)
-openai-whisper==20231117
+openai-whisper>=20231117
 
 # Audio feature extraction (pitch, RMS, speech rate)
-librosa==0.10.2.post1
-soundfile==0.12.1                 # Audio I/O backend for librosa
-audioread==3.0.1                  # Fallback audio decoder
+librosa>=0.10.2
+soundfile>=0.12.1                 # Audio I/O backend for librosa
+audioread>=3.0.1                  # Fallback audio decoder
 
 # --- Numerical & Scientific --------------------------------------------------
-numpy==1.26.4
-scipy==1.13.1
+numpy>=1.26.4
+scipy>=1.13.1
 
 # --- Data Validation ---------------------------------------------------------
-pydantic==2.8.2                   # Strict payload validation for WS messages
-python-dotenv==1.0.1              # Load .env variables into Django settings
+pydantic>=2.8.2                   # Strict payload validation for WS messages
+email-validator>=2.2.0            # Required by pydantic.EmailStr (candidate_email field)
+python-dotenv>=1.0.1              # Load .env variables into Django settings
 
 # --- PDF Reporting -----------------------------------------------------------
-reportlab==4.2.2                  # PDF generation (charts, RTL Hebrew text, layout)
-Pillow==10.4.0                    # Image processing for reportlab (logo, charts)
+reportlab>=4.2.2                  # PDF generation (charts, RTL Hebrew text, layout)
+Pillow>=10.4.0                    # Image processing for reportlab (logo, charts)
 
 # --- Utilities ---------------------------------------------------------------
-python-multipart==0.0.9           # Multipart form parsing (if needed for uploads)
-typing-extensions==4.12.2         # Backport of newer typing features (TypedDict etc.)
+python-multipart>=0.0.9           # Multipart form parsing (if needed for uploads)
+typing-extensions>=4.12.2         # Backport of newer typing features (TypedDict etc.)
