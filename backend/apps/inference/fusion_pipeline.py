@@ -28,6 +28,12 @@ logger = logging.getLogger(__name__)
 
 NEUTRAL_FALLBACK: float = 0.5
 
+# Speech-rate stress heuristic — normal conversational Hebrew speech sits
+# roughly in [_WPM_CALM, _WPM_STRESSED]; faster speech nudges 'anxious' up.
+_WPM_CALM: float     = 90.0
+_WPM_STRESSED: float = 200.0
+_MAX_NUDGE: float    = 0.1
+
 EMOTION_CLASSES: list[str] = [
     "neutral",
     "confident",
@@ -92,29 +98,63 @@ class FusionPipeline:
 
     def predict(
         self,
-        video_score: float,
-        audio_score: float,
+        video_logits: list[float],
+        audio_logits: list[float],
         text_score: float,
     ) -> dict[str, float]:
         """
-        Fuse three modality scores into an 8-class emotion distribution.
+        Fuse video/audio logits and text score into an 8-class emotion distribution.
 
         Parameters
         ----------
-        video_score : float output of VideoEmotionPipeline.predict()
-        audio_score : float output of AudioEmotionPipeline.predict()
-        text_score  : float output of TextEmotionPipeline.predict()
+        video_logits : list of 8 floats — raw logits from VideoEmotionPipeline
+        audio_logits : list of 8 floats — raw logits from AudioEmotionPipeline
+        text_score   : float in [0,1] from TextEmotionPipeline
 
         Returns
         -------
-        dict mapping each of the 8 emotion labels to a confidence float.
-        Values sum to 1.0. On any exception, returns {neutral: 1.0, ...}.
+        dict mapping each of the 8 emotion labels to a confidence float summing to 1.0.
+        Returns {neutral: 1.0, ...} on any exception.
         """
         try:
-            return self._predict(video_score, audio_score, text_score)
+            return self._predict(video_logits, audio_logits, text_score)
         except Exception:
             logger.exception("FusionPipeline.predict failed")
             return dict(_FALLBACK_OUTPUT)
+
+    def apply_speech_rate(
+        self,
+        scores: dict[str, float],
+        wpm: float | None,
+    ) -> dict[str, float]:
+        """
+        Nudge the 'anxious' score based on speaking rate (words-per-minute),
+        then renormalize so the distribution still sums to 1.0.
+
+        Parameters
+        ----------
+        scores : output of predict()
+        wpm    : words-per-minute from TextEmotionPipeline.compute_speech_rate(),
+                 or None if no transcript was available for this window.
+
+        Returns
+        -------
+        Adjusted scores dict; unchanged if wpm is None.
+        """
+        if wpm is None or wpm <= 0:
+            return scores
+        try:
+            stress = float(np.clip((wpm - _WPM_CALM) / (_WPM_STRESSED - _WPM_CALM), 0.0, 1.0))
+            nudge = (stress - 0.5) * 2 * _MAX_NUDGE  # in [-_MAX_NUDGE, +_MAX_NUDGE]
+
+            adjusted = dict(scores)
+            adjusted["anxious"] = float(np.clip(adjusted["anxious"] + nudge, 0.0, 1.0))
+
+            total = sum(adjusted.values())
+            return {k: v / total for k, v in adjusted.items()} if total > 0 else adjusted
+        except Exception:
+            logger.exception("FusionPipeline.apply_speech_rate failed")
+            return scores
 
     # ------------------------------------------------------------------
     # Internal
@@ -122,16 +162,16 @@ class FusionPipeline:
 
     def _predict(
         self,
-        video_score: float,
-        audio_score: float,
+        video_logits: list[float],
+        audio_logits: list[float],
         text_score: float,
     ) -> dict[str, float]:
         if self._session is None:
             return dict(_FALLBACK_OUTPUT)
 
-        # Input: [1, 3] — three modality scores as a single row.
+        # Input: [1, 17] — video[8] + audio[8] + text[1]
         model_input = np.array(
-            [[video_score, audio_score, text_score]],
+            [video_logits + audio_logits + [text_score]],
             dtype=np.float32,
         )
 

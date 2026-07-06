@@ -1,83 +1,88 @@
-"""
-Phase 6.6 — Unified ONNX Export & INT8 Dynamic Quantization (Kaggle GPU)
-
-Converts all four trained PyTorch checkpoints to ONNX, then applies
-INT8 dynamic quantization using onnxruntime.quantization.
-
-Run this after training all four models (6.1–6.4).
-
-Input  (all under /kaggle/working/):
-    efficientnet_lstm.pt
-    wav2vec2_classifier.pt
-    xlm_roberta_sentiment.pt
-    cross_modal_transformer.pt
-
-Output (all under /kaggle/working/):
-    *_quant.onnx  ← copy each to its corresponding models/<modality>/ directory
-
-Usage:
-    python export_and_quantize.py
-    python export_and_quantize.py --model video
-    python export_and_quantize.py --skip_export   # only quantize existing .onnx files
-"""
+# Phase 6.6 — Export all four trained PyTorch checkpoints to full-precision ONNX
+# Quantization is intentionally skipped: INT8 dynamic quantization breaks LSTM/transformer
+# accuracy (video F1 dropped from 0.87 to 0.07). Full-precision ONNX is fast enough for
+# the project's <10s CPU inference budget.
 from __future__ import annotations
 
 import argparse
-import shutil
+import time
 from pathlib import Path
 
 WORKING_DIR = Path("/kaggle/working")
+
+_CKPT_NAMES = {
+    "video":  "efficientnet_lstm.pt",
+    "audio":  "wav2vec2_classifier.pt",
+    "text":   "xlm_roberta_sentiment.pt",
+    "fusion": "cross_modal_transformer.pt",
+}
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
+def export_run(model: str = "all", skip_export: bool = False) -> None:
+    """Notebook entry point — call this directly (e.g. `export_run()` or
+    `export_run("audio")`) instead of main(). Running the whole script in a notebook cell
+    triggers `if __name__ == "__main__"`, and argparse then reads the kernel's own
+    sys.argv (e.g. Colab/Kaggle's `-f kernel.json` launcher flag) instead of your intended
+    arguments, raising 'unrecognized arguments'. This function takes plain parameters
+    instead, so it has nothing to do with sys.argv. One call now handles all four models
+    in a single run and skips any model whose checkpoint isn't available yet, rather than
+    stopping partway. Named export_run (not run) because evaluate_models.py also defines
+    a notebook entry point called run() — both pasted into the same notebook would
+    silently overwrite each other under the same name."""
+    t_total = time.time()
+    print(f"[Export] Target: {model}")
+
+    if model in ("all", "video"):
+        _handle("video", skip_export)
+    if model in ("all", "audio"):
+        _handle("audio", skip_export)
+    if model in ("all", "text"):
+        _handle("text", skip_export)
+    if model in ("all", "fusion"):
+        _handle("fusion", skip_export)
+
+    elapsed = (time.time() - t_total) / 60
+    print(f"\n[Export] All done in {elapsed:.1f} min.")
+    _print_copy_instructions()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export + quantize DeepCue models.")
     parser.add_argument("--model", default="all",
                         choices=["all", "video", "audio", "text", "fusion"])
     parser.add_argument("--skip_export", action="store_true",
-                        help="Skip PyTorch → ONNX export; only quantize existing .onnx files.")
+                        help="Skip PyTorch → ONNX step; only quantize existing .onnx files.")
     args = parser.parse_args()
-
-    target = args.model
-
-    if target in ("all", "video"):
-        _handle("video", args.skip_export)
-    if target in ("all", "audio"):
-        _handle("audio", args.skip_export)
-    if target in ("all", "text"):
-        _handle("text", args.skip_export)
-    if target in ("all", "fusion"):
-        _handle("fusion", args.skip_export)
-
-    print("\nAll requested models exported and quantized.")
-    _print_copy_instructions()
+    export_run(args.model, args.skip_export)
 
 
 def _handle(model_name: str, skip_export: bool) -> None:
     onnx_path = _onnx_path(model_name)
 
     if not skip_export:
-        print(f"\n[{model_name}] Exporting PyTorch → ONNX ...")
+        ckpt_path = WORKING_DIR / _CKPT_NAMES[model_name]
+        if not ckpt_path.exists():
+            print(f"[Export] {model_name}: checkpoint {ckpt_path.name} not found — skipping entirely.")
+            return
+        t0 = time.time()
+        print(f"\n[Export] {model_name}: PyTorch → ONNX ...")
         _export(model_name)
+        print(f"[Export] {model_name}: ONNX written in {time.time()-t0:.1f}s")
 
     if not onnx_path.exists():
-        print(f"[{model_name}] ONNX file not found: {onnx_path} — skipping quantization.")
+        print(f"[Export] {model_name}: {onnx_path} not found.")
         return
 
-    quant_path = _quant_path(model_name)
-    print(f"[{model_name}] Quantizing {onnx_path.name} → {quant_path.name} ...")
-    _quantize(onnx_path, quant_path)
-    size_fp = onnx_path.stat().st_size / 1024 / 1024
-    size_q  = quant_path.stat().st_size / 1024 / 1024
-    print(f"[{model_name}] Full: {size_fp:.1f} MB  →  Quantized: {size_q:.1f} MB  "
-          f"({100 * (1 - size_q / size_fp):.0f}% reduction)")
+    size_mb = onnx_path.stat().st_size / 1024 / 1024
+    print(f"[Export] {model_name}: {onnx_path.name}  ({size_mb:.1f} MB)")
 
 
 def _export(model_name: str) -> None:
-    """Delegate to the training script's export_onnx() function."""
+    """Call the training script's export_onnx() to re-use its model definition."""
     if model_name == "video":
         from train_video_model import export_onnx
         export_onnx()
@@ -92,18 +97,6 @@ def _export(model_name: str) -> None:
         export_onnx()
 
 
-def _quantize(onnx_path: Path, quant_path: Path) -> None:
-    """Apply INT8 dynamic quantization using onnxruntime.quantization."""
-    from onnxruntime.quantization import quantize_dynamic, QuantType
-
-    quantize_dynamic(
-        model_input=str(onnx_path),
-        model_output=str(quant_path),
-        weight_type=QuantType.QInt8,
-        optimize_model=True,
-    )
-
-
 def _onnx_path(model_name: str) -> Path:
     names = {
         "video":  "efficientnet_lstm.onnx",
@@ -114,30 +107,19 @@ def _onnx_path(model_name: str) -> Path:
     return WORKING_DIR / names[model_name]
 
 
-def _quant_path(model_name: str) -> Path:
-    p = _onnx_path(model_name)
-    return p.with_name(p.stem + "_quant.onnx")
-
-
 def _print_copy_instructions() -> None:
-    print("\n" + "="*60)
-    print("Copy quantized models to the Django backend:")
+    print("\n" + "=" * 60)
+    print("Download from Kaggle output panel, then copy to backend:")
     print()
-    print("  /kaggle/working/efficientnet_lstm_quant.onnx")
-    print("    → models/video/efficientnet_lstm.onnx")
-    print()
-    print("  /kaggle/working/wav2vec2_classifier_quant.onnx")
-    print("    → models/audio/wav2vec2_classifier.onnx")
-    print()
-    print("  /kaggle/working/xlm_roberta_sentiment_quant.onnx")
-    print("    → models/text/xlm_roberta_sentiment.onnx")
-    print()
-    print("  /kaggle/working/cross_modal_transformer_quant.onnx")
-    print("    → models/fusion/cross_modal_transformer.onnx")
+    print("  efficientnet_lstm.onnx        → models/video/efficientnet_lstm.onnx")
+    print("  wav2vec2_classifier.onnx      → models/audio/wav2vec2_classifier.onnx")
+    print("  xlm_roberta_sentiment.onnx    → models/text/xlm_roberta_sentiment.onnx")
+    print("  cross_modal_transformer.onnx  → models/fusion/cross_modal_transformer.onnx")
     print()
     print("Then update VIDEO/AUDIO/TEXT/FUSION_MODEL_PATH in your .env file.")
-    print("="*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":
     main()
+    print("=" * 50 + " SCRIPT COMPLETE " + "=" * 50)

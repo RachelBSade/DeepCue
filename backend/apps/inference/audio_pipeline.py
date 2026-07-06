@@ -75,9 +75,9 @@ class AudioEmotionPipeline:
     # Public predict — NEUTRAL_FALLBACK wraps everything (5B.5)
     # ------------------------------------------------------------------
 
-    def predict(self, audio_bytes: bytes, sample_rate: int) -> float:
+    def predict(self, audio_bytes: bytes, sample_rate: int) -> np.ndarray:
         """
-        Return emotion intensity score for one audio chunk.
+        Return 8-class emotion logits for one audio chunk.
 
         Parameters
         ----------
@@ -86,18 +86,17 @@ class AudioEmotionPipeline:
 
         Returns
         -------
-        float in [0.0, 1.0]; NEUTRAL_FALLBACK on any exception.
+        np.ndarray of shape [8,] — raw logits; zeros (neutral) on any exception.
         """
         try:
             return self._predict(audio_bytes, sample_rate)
         except Exception:
             logger.exception("AudioEmotionPipeline.predict failed")
-            return NEUTRAL_FALLBACK
+            return np.zeros(8, dtype=np.float32)
 
-    def _predict(self, audio_bytes: bytes, sample_rate: int) -> float:
-        """Run the loaded ONNX session on raw audio bytes; raises on failure (caller handles fallback)."""
+    def _predict(self, audio_bytes: bytes, sample_rate: int) -> np.ndarray:
         if self._session is None:
-            return NEUTRAL_FALLBACK
+            return np.zeros(8, dtype=np.float32)
 
         waveform = _decode_audio(audio_bytes, sample_rate)  # [48000,] float32
         features = _extract_features(waveform)               # [16,]    float32
@@ -109,8 +108,7 @@ class AudioEmotionPipeline:
         feed = {input_names[0]: audio_input, input_names[1]: feat_input}
 
         outputs = self._session.run(None, feed)
-        score = float(outputs[0].flatten()[0])
-        return float(np.clip(score, 0.0, 1.0))
+        return outputs[0].flatten().astype(np.float32)  # [8,]
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +132,10 @@ def _decode_audio(audio_bytes: bytes, declared_sr: int) -> np.ndarray:
     # Resample to 16 kHz if needed.
     if sr != _SAMPLE_RATE:
         audio = librosa.resample(audio, orig_sr=sr, target_sr=_SAMPLE_RATE)
+
+    # Zero-mean / unit-variance normalisation — matches train_audio_model.py's _load_audio()
+    # and wav2vec2's expected preprocessing (it was pretrained on normalised input).
+    audio = (audio - audio.mean()) / np.sqrt(audio.var() + 1e-7)
 
     # Pad or truncate to fixed length.
     if len(audio) < _EXPECTED_SAMPLES:

@@ -118,6 +118,29 @@ class TextEmotionPipeline:
             logger.exception("TextEmotionPipeline.transcribe failed")
             return ""
 
+    def compute_speech_rate(self, text: str, audio_bytes: bytes) -> float:
+        """
+        Estimate speaking rate in words-per-minute from the Whisper transcript
+        and the chunk's audio duration — used as a stress/calm signal in fusion.
+
+        Returns
+        -------
+        float WPM; 0.0 if the text is empty or on any failure (caller treats
+        0.0 as "no signal" rather than caching it).
+        """
+        if not text.strip():
+            return 0.0
+        try:
+            waveform = _decode_audio(audio_bytes)
+            duration_sec = len(waveform) / 16000.0
+            if duration_sec <= 0:
+                return 0.0
+            word_count = len(text.split())
+            return float(word_count / duration_sec * 60.0)
+        except Exception:
+            logger.exception("TextEmotionPipeline.compute_speech_rate failed")
+            return 0.0
+
     def predict(self, text: str) -> float:
         """
         Score a Hebrew text string for emotion intensity.
