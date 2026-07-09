@@ -180,6 +180,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                 "frame_index": msg.frame_index,
                 "timestamp":   msg.timestamp,
                 "landmarks":   [p.model_dump() for p in msg.landmarks],
+                "frame_jpeg":  msg.frame_jpeg,
                 "group_name":  self.group_name,
             },
             "video_queue",
@@ -290,6 +291,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             "frame_index":      event["frame_index"],
             "scores":           event["scores"],
             "dominant_emotion": event["dominant_emotion"],
+            "speech_rate_wpm":  event.get("speech_rate_wpm"),
         }))
 
     async def transcript_update(self, event: dict[str, Any]) -> None:

@@ -30,27 +30,22 @@ def process_video_frame(
     frame_index: int,
     timestamp: float,
     landmarks: list[dict],
+    frame_jpeg: str,
     group_name: str,
 ) -> None:
     """
-    Process one MediaPipe landmark frame through the video emotion pipeline.
-
-    Steps:
-      1. Load (or reuse) the VideoEmotionPipeline singleton.
-      2. Run predict() → float score.
-      3. Cache the score in Redis keyed by session_id.
-      4. Trigger the fusion task to re-evaluate the unified emotion state.
+    Decode the 224×224 JPEG frame, run it through the video emotion pipeline,
+    and cache the resulting 8-class logit array in Redis for fusion_tasks.
     """
     from apps.inference.video_pipeline import VideoEmotionPipeline
 
     pipeline = VideoEmotionPipeline.get_instance()
-    score: float = pipeline.predict(landmarks, frame_index, session_id)
+    logits = pipeline.predict(frame_jpeg, frame_index, session_id)  # np.ndarray [8,]
 
-    # Cache latest video score for this session.
     r = _get_redis()
-    r.setex(_REDIS_KEY.format(session_id=session_id), _SCORE_TTL, str(score))
+    r.setex(_REDIS_KEY.format(session_id=session_id), _SCORE_TTL, json.dumps(logits.tolist()))
 
-    logger.debug("video_score session=%s frame=%d score=%.4f", session_id, frame_index, score)
+    logger.debug("video_logits session=%s frame=%d argmax=%d", session_id, frame_index, int(logits.argmax()))
 
     # Trigger fusion on every video frame — fusion reads all three cached scores.
     run_fusion.apply_async(

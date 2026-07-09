@@ -1,8 +1,9 @@
 # =============================================================================
-# DeepCue — Backend Requirements (Django Inference Server)
-# Environment: Local Windows CPU / Production Server (CPU-only)
+# DeepCue — Production / Inference Requirements (Django backend)
+# Environment: Windows or Linux, CPU-only. Python 3.12
+#              (3.14 has broken C-extension wheels for several deps here).
 # Purpose:     Runtime inference only. NO model training happens here.
-#              All heavy training is done on Kaggle (see requirements_kaggle.txt).
+#              Training/export deps live in requirements-train.txt (Kaggle GPU).
 #
 # Install:
 #   pip install -r requirements.txt
@@ -23,15 +24,16 @@ django-cors-headers==4.4.0        # CORS headers for frontend → backend dev
 # --- Task Queue & Scheduling -------------------------------------------------
 celery==5.4.0                     # Distributed task queue
 django-celery-results==2.5.1      # Store Celery results in Django DB / Redis
-redis==5.0.8                      # Python Redis client (broker + cache)
+redis==4.6.0                      # Python Redis client — 5.x sends CLIENT SETINFO which requires Redis 7.2+; pin to 4.x for compatibility
 
 # --- Database ----------------------------------------------------------------
 pymongo>=4.15.2                   # MongoDB Atlas sync driver (for reports, schemas)
 motor>=3.5.0                      # Async MongoDB driver (for Channels consumers)
 
 # --- ML: Inference Runtime (CPU) --------------------------------------------
-# PyTorch CPU-only — pulled from --extra-index-url above
-# Versions 2.9+ support Python 3.14
+# PyTorch CPU-only — pulled from --extra-index-url above.
+# Present at inference ONLY because openai-whisper (Hebrew ASR) requires it;
+# all four emotion models run through ONNX Runtime, not torch.
 torch==2.11.0+cpu
 torchaudio==2.11.0+cpu
 

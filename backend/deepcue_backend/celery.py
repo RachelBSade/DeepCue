@@ -8,7 +8,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "deepcue_backend.settings.local"
 
 app = Celery("deepcue")
 app.config_from_object("django.conf:settings", namespace="CELERY")
-app.autodiscover_tasks()
+app.conf.include = [
+    "tasks.video_tasks",
+    "tasks.audio_tasks",
+    "tasks.text_tasks",
+    "tasks.fusion_tasks",
+    "tasks.report_tasks",
+]
 
 # ---------------------------------------------------------------------------
 # Celery Beat periodic schedule stubs (4.8)

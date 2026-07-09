@@ -11,10 +11,12 @@
  * again in every outbound message for traceability.
  */
 
-import { MediaPipeHandler } from './mediapipe_handler.js';
-import { AudioHandler }     from './audio_handler.js';
-import { WebSocketClient }  from './websocket_client.js';
-import { UIController }     from './ui_controller.js';
+import { MediaPipeHandler }   from './mediapipe_handler.js';
+import { AudioHandler }       from './audio_handler.js';
+import { WebSocketClient }    from './websocket_client.js';
+import { UIController }       from './ui_controller.js';
+import { QuestionController } from './question_controller.js';
+import { applyTranslations, toggleLang } from './i18n.js';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -31,23 +33,46 @@ let ui              = null;
 let wsClient        = null;
 let mediaPipe       = null;
 let audioHandler    = null;
+let questionCtrl    = null;
 
 // ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Name is collected on the landing page (landing.js); redirect back there
+  // if this page was opened directly without going through it first.
+  const storedName = sessionStorage.getItem('deepcue_candidate_name');
+  if (!storedName) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  applyTranslations();
+  document.getElementById('lang-toggle').addEventListener('click', () => {
+    toggleLang();
+    // Re-render the current question text in the new language without resetting progress.
+    if (questionCtrl) questionCtrl.refreshLanguage();
+  });
+
   ui = new UIController();
   ui.onStart = handleStart;
   ui.onStop  = handleStop;
+
+  questionCtrl = new QuestionController();
+
+  const nameDisplay = document.getElementById('candidate-name-display');
+  if (nameDisplay) nameDisplay.textContent = storedName;
 });
 
 // ---------------------------------------------------------------------------
 // Session lifecycle handlers
 // ---------------------------------------------------------------------------
 
+/** Open the WebSocket, register all inbound message handlers, and connect. Bound to the Start button. */
 async function handleStart() {
-  const candidateName = ui.getCandidateName() || 'Unknown';
+  const candidateName  = sessionStorage.getItem('deepcue_candidate_name')  || 'Unknown';
+  const candidateEmail = sessionStorage.getItem('deepcue_candidate_email') || '';
 
   // Generate a fresh session ID for each interview run.
   sessionId = crypto.randomUUID();
@@ -60,17 +85,18 @@ async function handleStart() {
 
   wsClient.on('__open', () => {
     // Connection established — send session_start immediately.
-    wsClient.sendSessionStart(candidateName);
+    wsClient.sendSessionStart(candidateName, candidateEmail);
   });
 
   wsClient.on('session_started', (_data) => {
-    // Server confirmed session creation — start camera + mic.
+    // Server confirmed session creation — start camera + mic + question carousel.
     ui.setActive(candidateName);
+    questionCtrl.start();
     _startCapture(candidateName);
   });
 
   wsClient.on('emotion_result', (data) => {
-    ui.updateEmotions(data.scores, data.dominant_emotion);
+    ui.updateEmotions(data.scores, data.dominant_emotion, data.speech_rate_wpm ?? null);
   });
 
   wsClient.on('transcript_update', (data) => {
@@ -79,6 +105,7 @@ async function handleStart() {
 
   wsClient.on('session_ended', (data) => {
     ui.setEnded(data.report_url);
+    questionCtrl.stop();
     _stopCapture();
   });
 
@@ -103,6 +130,7 @@ async function handleStart() {
   wsClient.connect();
 }
 
+/** Tell the server the session is ending; the UI stays "active" until session_ended arrives. */
 async function handleStop() {
   if (wsClient) {
     wsClient.sendSessionEnd(sessionId);
@@ -116,13 +144,17 @@ async function handleStop() {
 // Capture helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Request camera + mic permissions and start streaming frames/audio over the WebSocket.
+ * @param {string} candidateName - unused here, kept for call-site clarity/future use.
+ */
 async function _startCapture(candidateName) {
   const videoEl = document.getElementById('webcam');
 
   // --- MediaPipe -----------------------------------------------------------
-  mediaPipe = new MediaPipeHandler(videoEl, (landmarks, frameIndex, timestamp) => {
+  mediaPipe = new MediaPipeHandler(videoEl, (landmarks, frameIndex, timestamp, frameJpeg) => {
     if (!wsClient) return;
-    wsClient.sendVideoFrame(sessionId, landmarks, frameIndex, timestamp);
+    wsClient.sendVideoFrame(sessionId, landmarks, frameIndex, timestamp, frameJpeg);
   });
 
   // --- Audio ---------------------------------------------------------------
@@ -145,6 +177,7 @@ async function _startCapture(candidateName) {
   }
 }
 
+/** Stop and release the camera and microphone, if currently active. */
 function _stopCapture() {
   if (mediaPipe) {
     mediaPipe.stop();

@@ -19,7 +19,8 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_REDIS_KEY = "deepcue:scores:{session_id}:text"
+_REDIS_KEY        = "deepcue:scores:{session_id}:text"
+_SPEECH_RATE_KEY  = "deepcue:scores:{session_id}:speech_rate"
 _SCORE_TTL = 60
 
 
@@ -54,10 +55,13 @@ def process_transcript_segment(
     pipeline = TextEmotionPipeline.get_instance()
     text: str   = pipeline.transcribe(audio_bytes)
     score: float = pipeline.predict(text)
+    wpm: float  = pipeline.compute_speech_rate(text, audio_bytes)
 
-    # Cache text score.
+    # Cache text score (and speech rate, if we got a usable transcript).
     r = _get_redis()
     r.setex(_REDIS_KEY.format(session_id=session_id), _SCORE_TTL, str(score))
+    if wpm > 0:
+        r.setex(_SPEECH_RATE_KEY.format(session_id=session_id), _SCORE_TTL, str(wpm))
 
     logger.debug("text_score session=%s chunk=%d score=%.4f text=%r", session_id, chunk_index, score, text[:40])
 

@@ -25,6 +25,7 @@ class EmotionFrame(TypedDict):
     text_score: float
     fusion_scores: EmotionScores
     dominant_emotion: str
+    speech_rate_wpm: Optional[float]
 
 
 class TranscriptSegment(TypedDict):

@@ -43,7 +43,8 @@ emotion_result
     "timestamp":         <float>,
     "frame_index":       <int>,
     "scores":            { "neutral": 0.0, "confident": 0.0, ... },
-    "dominant_emotion":  "<str>" }
+    "dominant_emotion":  "<str>",
+    "speech_rate_wpm":   <float | null> }
 
 transcript_update
   { "type": "transcript_update",
@@ -111,6 +112,7 @@ class VideoFrameMessage(TypedDict):
     frame_index: int
     timestamp: float
     landmarks: list[LandmarkPoint]  # exactly 468 points
+    frame_jpeg: str                 # base64 JPEG 224×224 — used by the video model
 
 
 class AudioChunkMessage(TypedDict):

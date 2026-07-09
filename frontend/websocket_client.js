@@ -51,9 +51,14 @@ export class WebSocketClient {
 
   /**
    * @param {string} candidateName
+   * @param {string} [candidateEmail] - Optional; report is emailed here when set.
    */
-  sendSessionStart(candidateName) {
-    this._send({ type: 'session_start', candidate_name: candidateName });
+  sendSessionStart(candidateName, candidateEmail = '') {
+    this._send({
+      type:            'session_start',
+      candidate_name:  candidateName,
+      candidate_email: candidateEmail,
+    });
   }
 
   /**
@@ -62,13 +67,14 @@ export class WebSocketClient {
    * @param {number}   frameIndex
    * @param {number}   timestamp   - Unix epoch seconds
    */
-  sendVideoFrame(sessionId, landmarks, frameIndex, timestamp) {
+  sendVideoFrame(sessionId, landmarks, frameIndex, timestamp, frameJpeg) {
     this._send({
       type:        'video_frame',
       session_id:  sessionId,
       frame_index: frameIndex,
       timestamp,
       landmarks,
+      frame_jpeg:  frameJpeg,  // base64 JPEG 224×224 — used by the video model
     });
   }
 
@@ -114,6 +120,7 @@ export class WebSocketClient {
   // Private
   // ---------------------------------------------------------------------------
 
+  /** @private Open the underlying WebSocket and wire its on* event callbacks. */
   _open() {
     this._ws = new WebSocket(this._url);
 
@@ -152,6 +159,10 @@ export class WebSocketClient {
     };
   }
 
+  /**
+   * @private Serialize and send a payload if the socket is open; warns and drops it otherwise.
+   * @param {object} payload
+   */
   _send(payload) {
     if (this._ws && this._ws.readyState === WebSocket.OPEN) {
       this._ws.send(JSON.stringify(payload));
@@ -160,6 +171,7 @@ export class WebSocketClient {
     }
   }
 
+  /** @private Reconnect with exponential backoff (capped), or give up after MAX_RETRIES. */
   _scheduleReconnect() {
     if (this._retries >= MAX_RETRIES) {
       console.error('[WS] Max reconnect attempts reached.');

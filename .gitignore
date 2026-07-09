@@ -20,6 +20,9 @@ models/fusion/*.onnx
 models/fusion/*.onnx.data
 models/text/whisper_cache/
 
+# Backend-local model cache (Whisper base.pt etc.) — large binaries, not for VCS
+backend/models/
+
 # Generated reports
 reports/
 
@@ -32,3 +35,7 @@ db.sqlite3
 Thumbs.db
 
 checkpoints/
+ignore/
+deepcue_workflow_checklist.md
+PROJECT.md
+~$*.pptx

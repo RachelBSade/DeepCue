@@ -167,6 +167,7 @@ function _encodeWav(samples, sampleRate) {
   return buffer;
 }
 
+/** Write an ASCII string into a DataView at the given byte offset (used for WAV chunk IDs). */
 function _writeString(view, offset, str) {
   for (let i = 0; i < str.length; i++) {
     view.setUint8(offset + i, str.charCodeAt(i));

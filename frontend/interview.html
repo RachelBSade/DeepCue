@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepCue — Real-Time Emotion Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- MediaPipe Face Mesh — must load before ES modules (modules are deferred) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-deep">Deep</span><span class="logo-cue">Cue</span>
+      </div>
+      <div class="header-right">
+        <button id="lang-toggle" class="lang-toggle" data-i18n="lang.toggle">עב</button>
+        <span id="status-badge" class="status-badge status-idle" data-i18n="header.timer_label">Idle</span>
+        <span id="session-timer" class="session-timer">00:00</span>
+      </div>
+    </header>
+
+    <!-- ── Question carousel ─────────────────────────────────── -->
+    <section id="question-panel" class="question-panel hidden">
+      <span id="question-progress" class="question-progress">Question 1/10</span>
+      <p id="question-text" class="question-text">—</p>
+      <button id="question-next" class="btn btn-start question-next" data-i18n="question.next">Next Question →</button>
+      <div id="question-resizer" class="question-resizer" title="Drag to resize"></div>
+    </section>
+
+    <!-- ── Pre-question countdown overlay ──────────────────────── -->
+    <div id="countdown-overlay" class="countdown-overlay hidden">
+      <span id="countdown-number" class="countdown-number">5</span>
+      <p class="countdown-label" data-i18n="countdown.label">Get ready…</p>
+    </div>
+
+    <!-- ── Main content ───────────────────────────────────────── -->
+    <main class="main-content">
+
+      <!-- Left: webcam feed (long-press + drag to swap with the emotion panel) -->
+      <section class="video-panel" title="Drag the divider to resize. Press and hold, then drag, to swap sides.">
+        <div class="video-wrapper">
+          <video id="webcam" autoplay playsinline muted></video>
+          <div id="no-camera-overlay" class="no-camera-overlay">
+            <p>Camera access required</p>
+          </div>
+        </div>
+        <div id="candidate-label" class="candidate-label">—</div>
+      </section>
+
+      <div id="panel-resizer" class="panel-resizer" title="Drag to resize"></div>
+
+      <!-- Right: emotion analysis panel (long-press + drag to swap with the camera) -->
+      <aside class="emotion-panel" title="Press and hold, then drag, to swap sides.">
+        <h2 class="panel-title" data-i18n="panel.emotion_title">Emotion Analysis</h2>
+
+        <div id="emotion-bars" class="emotion-bars">
+          <div class="emotion-row" data-emotion="neutral">
+            <span class="emotion-label">Neutral</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="confident">
+            <span class="emotion-label">Confident</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="anxious">
+            <span class="emotion-label">Anxious</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="happy">
+            <span class="emotion-label">Happy</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="sad">
+            <span class="emotion-label">Sad</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="angry">
+            <span class="emotion-label">Angry</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="surprised">
+            <span class="emotion-label">Surprised</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+          <div class="emotion-row" data-emotion="uncertain">
+            <span class="emotion-label">Uncertain</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+            <span class="emotion-score">0.00</span>
+          </div>
+        </div>
+
+        <div class="dominant-emotion">
+          <span class="dominant-label" data-i18n="panel.dominant">Dominant</span>
+          <span id="dominant-value" class="dominant-value">—</span>
+        </div>
+
+        <div class="speech-rate">
+          <span class="speech-rate-label" data-i18n="panel.speech_rate">Speech rate</span>
+          <span><span id="speech-rate-value" class="speech-rate-value">—</span> <span data-i18n="panel.speech_rate_unit">wpm</span></span>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ── Transcript ─────────────────────────────────────────── -->
+    <section class="transcript-panel">
+      <h2 class="panel-title"><span data-i18n="panel.transcript">Transcript</span>
+        <span class="transcript-lang" data-i18n="panel.transcript_lang">(Hebrew)</span>
+      </h2>
+      <div id="transcript-feed" class="transcript-feed" dir="rtl"></div>
+    </section>
+
+    <!-- ── Controls ───────────────────────────────────────────── -->
+    <footer class="controls-bar">
+      <!-- Candidate name/email were already collected on the landing page (landing.js
+           stores them in sessionStorage); this hidden input keeps UIController's
+           existing getCandidateName() API working without changes. -->
+      <input id="candidate-name-input" type="hidden" />
+      <span id="candidate-name-display" class="candidate-name-display"></span>
+      <button id="btn-start" class="btn btn-start" data-i18n="controls.start">▶ Start Interview</button>
+      <button id="btn-stop"  class="btn btn-stop" disabled data-i18n="controls.stop">■ Stop</button>
+      <div id="error-message" class="error-message"></div>
+    </footer>
+
+  </div>
+
+  <!-- ES module entry point — loaded after MediaPipe globals are available -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>

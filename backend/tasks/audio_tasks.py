@@ -8,6 +8,7 @@ The fusion task reads this cached score on its next trigger.
 from __future__ import annotations
 
 import base64
+import json
 import logging
 
 import redis
@@ -43,12 +44,12 @@ def process_audio_chunk(
         return
 
     pipeline = AudioEmotionPipeline.get_instance()
-    score: float = pipeline.predict(audio_bytes, sample_rate)
+    logits = pipeline.predict(audio_bytes, sample_rate)  # np.ndarray [8,]
 
     r = _get_redis()
-    r.setex(_REDIS_KEY.format(session_id=session_id), _SCORE_TTL, str(score))
+    r.setex(_REDIS_KEY.format(session_id=session_id), _SCORE_TTL, json.dumps(logits.tolist()))
 
-    logger.debug("audio_score session=%s chunk=%d score=%.4f", session_id, chunk_index, score)
+    logger.debug("audio_logits session=%s chunk=%d argmax=%d", session_id, chunk_index, int(logits.argmax()))
 
 
 def _get_redis() -> redis.Redis:

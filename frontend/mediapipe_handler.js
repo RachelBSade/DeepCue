@@ -23,6 +23,14 @@ export class MediaPipeHandler {
     this._active     = false;
     this._faceMesh   = null;
     this._camera     = null;
+
+    // Offscreen canvas for capturing 224×224 RGB frames to send to the backend.
+    // The model (EfficientNet-B0 + LSTM) was trained on raw 224×224 RGB video frames,
+    // not on landmark renderings — so we send the actual pixel data for correct inference.
+    this._canvas = document.createElement('canvas');
+    this._canvas.width  = 224;
+    this._canvas.height = 224;
+    this._ctx = this._canvas.getContext('2d');
   }
 
   /** Initialise Face Mesh model and start the camera. */
@@ -33,7 +41,8 @@ export class MediaPipeHandler {
 
     this._faceMesh.setOptions({
       maxNumFaces:        1,
-      refineLandmarks:    true,
+      // refineLandmarks adds 10 iris points (468 -> 478); backend expects exactly 468.
+      refineLandmarks:    false,
       minDetectionConfidence: 0.5,
       minTrackingConfidence:  0.5,
     });
@@ -84,6 +93,10 @@ export class MediaPipeHandler {
       z: parseFloat(z.toFixed(6)),
     }));
 
-    this._onFrame(landmarks, this._frameIndex++, Date.now() / 1000);
+    // Capture the current video frame as a 224×224 JPEG for the video model.
+    this._ctx.drawImage(this._videoEl, 0, 0, 224, 224);
+    const frameJpeg = this._canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+
+    this._onFrame(landmarks, this._frameIndex++, Date.now() / 1000, frameJpeg);
   }
 }

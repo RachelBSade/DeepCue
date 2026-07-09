@@ -40,6 +40,9 @@ class VideoFrameSchema(BaseModel):
     frame_index: int = Field(ge=0)
     timestamp: float
     landmarks: list[LandmarkPointSchema] = Field(min_length=468, max_length=468)
+    # base64-encoded 224×224 JPEG captured from the browser video element.
+    # Used by the video model (EfficientNet-B0 + LSTM) which was trained on raw RGB frames.
+    frame_jpeg: str = Field(min_length=1)
 
 
 class AudioChunkSchema(BaseModel):

@@ -23,7 +23,12 @@ def get_sync_db() -> "Database":
     """Return the lazily-initialised pymongo Database singleton (Celery tasks, Django views)."""
     global _sync_client
     if _sync_client is None:
-        _sync_client = pymongo.MongoClient(settings.MONGODB_URI)
+        _sync_client = pymongo.MongoClient(
+            settings.MONGODB_URI,
+            serverSelectionTimeoutMS=2000,
+            connectTimeoutMS=2000,
+            socketTimeoutMS=2000,
+        )
     return _sync_client[settings.MONGODB_DB_NAME]
 
 
