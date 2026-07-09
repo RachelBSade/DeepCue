@@ -43,42 +43,178 @@ Set up the full project skeleton: directory structure, dependency files, environ
 ---
 
 ## Phase 1 — Django Project Bootstrap
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/manage.py` | Django CLI entry point; defaults to `settings.local` |
+| `backend/deepcue_backend/__init__.py` | Exposes `celery_app` so `-A deepcue_backend` resolves |
+| `backend/deepcue_backend/celery.py` | Celery app; autodiscovers tasks from all INSTALLED_APPS |
+| `backend/deepcue_backend/settings/base.py` | All shared settings: apps, middleware, Channels, Celery, MongoDB, inference paths |
+| `backend/deepcue_backend/settings/local.py` | Dev overrides: DEBUG=True, CORS open |
+| `backend/deepcue_backend/settings/production.py` | Production overrides: HTTPS, strict CORS, HSTS |
+| `backend/deepcue_backend/asgi.py` | ProtocolTypeRouter: HTTP → Django, WebSocket → Channels |
+| `backend/deepcue_backend/urls.py` | Root URL router |
+| `backend/apps/sessions_app/apps.py` | Session lifecycle app config |
+| `backend/apps/inference/apps.py` | Inference pipeline app config |
+| `backend/apps/reporting/apps.py` | PDF reporting app config |
+| `backend/db/mongo_client.py` | `sync_db` (pymongo) and `async_db` (motor) singletons |
+| `backend/db/schemas.py` | TypedDicts: `InterviewSession`, `EmotionFrame`, `TranscriptSegment` |
+| `backend/apps/sessions_app/views.py` | `GET /api/health/` — probes Django, Redis, MongoDB |
+| `backend/apps/sessions_app/urls.py` | URL patterns for sessions_app |
 
 ---
 
 ## Phase 2 — WebSocket Protocol & Django Channels Consumer
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/sessions_app/protocol.py` | Full WS message protocol: type constants + TypedDict schemas for all inbound/outbound messages |
+| `backend/apps/sessions_app/consumers.py` | `InterviewConsumer`: connect/disconnect/receive, all 5 inbound handlers, 4 outbound group handlers, `interviewer_audio` stub |
+| `backend/apps/sessions_app/routing.py` | WebSocket URL pattern `ws/interview/<session_id>/` (UUID4 regex) |
 
 ---
 
 ## Phase 3 — JS Web Frontend
-**Status: Not started**
+**Status: Complete (3.8 deferred — requires full backend running)**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `frontend/index.html` | SPA shell: webcam feed, emotion panel (8 bars), Hebrew transcript, controls |
+| `frontend/style.css` | Dark theme, per-emotion colour palette, responsive grid, RTL transcript support |
+| `frontend/mediapipe_handler.js` | `MediaPipeHandler`: loads Face Mesh from CDN, emits 468 normalised {x,y,z} landmarks per frame |
+| `frontend/audio_handler.js` | `AudioHandler`: buffers 3 s PCM chunks, encodes 16-bit mono WAV, emits base64 via callback |
+| `frontend/websocket_client.js` | `WebSocketClient`: typed send methods, handler registry, exponential backoff reconnect (5 retries, cap 30 s) |
+| `frontend/ui_controller.js` | `UIController`: all DOM mutations — state transitions, emotion bars, transcript feed, timer, errors |
+| `frontend/main.js` | Orchestrator: generates `session_id`, wires all modules, drives idle→connecting→active→ended state machine |
 
 ---
 
 ## Phase 4 — Celery Task Queue & Inference Orchestration
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/tasks/video_tasks.py` | `process_video_frame`: runs VideoEmotionPipeline, caches score, triggers fusion |
+| `backend/tasks/audio_tasks.py` | `process_audio_chunk`: decodes WAV, runs AudioEmotionPipeline, caches score |
+| `backend/tasks/text_tasks.py` | `process_transcript_segment`: Whisper transcription + XLM-RoBERTa score, pushes transcript_update |
+| `backend/tasks/fusion_tasks.py` | `run_fusion`: reads 3 Redis scores, runs FusionPipeline, writes EmotionFrame to MongoDB, pushes emotion_result |
+| `backend/tasks/report_tasks.py` | `generate_report`: pulls MongoDB data, generates PDF, stores in GridFS, pushes final session_ended |
+| `backend/deepcue_backend/celery.py` | Celery app + Beat schedule stub (frame-driven fusion; Beat heartbeat commented out) |
+
+### Also restored (missing from dev branch)
+All Phase 1 files: `manage.py`, `settings/`, `asgi.py`, `urls.py`, `db/`, `apps/*/apps.py`, `__init__.py` files.
 
 ---
 
 ## Phase 5 — Inference Pipelines (CPU-Optimized)
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/inference/video_pipeline.py` | `VideoEmotionPipeline`: landmarks→224×224 image, per-session LSTM buffer, ONNX inference |
+| `backend/apps/inference/audio_pipeline.py` | `AudioEmotionPipeline`: librosa feature extraction (pitch, RMS, ZCR, MFCCs) + wav2vec ONNX |
+| `backend/apps/inference/text_pipeline.py` | `TextEmotionPipeline`: Whisper Hebrew STT + XLM-RoBERTa ONNX sentiment scoring |
+| `backend/apps/inference/fusion_pipeline.py` | `FusionPipeline`: 3-score input → Cross-modal Transformer ONNX → 8-class softmax output |
+
+### Also updated
+`backend/tasks/video_tasks.py` — passes `session_id` to `predict()` for LSTM buffer keying.
 
 ---
 
 ## Phase 6 — Kaggle Training Scripts
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `kaggle_scripts/train_video_model.py` | `RAVDESSVideoDataset` + `EfficientNetLSTM` (timm B0 + BiLSTM); trains on RAVDESS mp4s; exports `efficientnet_lstm.onnx` |
+| `kaggle_scripts/train_audio_model.py` | `RAVDESSAudioDataset` + `Wav2Vec2EmotionClassifier`; 2-stage fine-tuning (freeze → full); exports `wav2vec2_classifier.onnx` with dual-input (waveform + features) |
+| `kaggle_scripts/finetune_xlm_roberta.py` | `XLMRobertaRegressor`; trained on CMU-MOSI + optional Hebrew CSV; exports `xlm_roberta_sentiment.onnx` |
+| `kaggle_scripts/train_fusion_model.py` | `CrossModalTransformer` (3-token self-attention + MLP head); supports synthetic or real modality scores; exports `cross_modal_transformer.onnx` |
+| `kaggle_scripts/evaluate_models.py` | CLI evaluator for all 4 models; reports Macro F1 per model; asserts >= 0.50 threshold |
+| `kaggle_scripts/export_and_quantize.py` | Unified export + INT8 dynamic quantization for all models; prints copy instructions for `models/` dirs |
+| `kaggle_scripts/README.md` | Dataset setup, execution order, artifact destinations, performance targets |
 
 ---
 
 ## Phase 7 — PDF Reporting (ReportLab)
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/apps/reporting/report_generator.py` | `InterviewReportGenerator.generate()` — 5-section A4 PDF: executive summary, emotion timeline chart, text insights (Hebrew RTL), model performance table, rule-based recommendations |
+| `backend/apps/reporting/pdf_storage.py` | `store_report()` / `retrieve_report()` — GridFS read/write; idempotent (deletes old file before re-storing) |
+| `backend/apps/reporting/views.py` | `download_report()` — `GET /api/report/<session_id>/` — streams PDF bytes; 404 if not found |
+| `backend/apps/reporting/urls.py` | URL pattern for the download endpoint |
+
+### Also updated
+`backend/deepcue_backend/urls.py` — added `path("api/", include("apps.reporting.urls"))`
 
 ---
 
 ## Phase 8 — Integration Testing & Performance Validation
-**Status: Not started**
+**Status: Complete**
+
+### Files created
+
+| File | Purpose |
+|---|---|
+| `backend/deepcue_backend/settings/test.py` | Test settings: in-memory channel layer, Celery eager mode, no-op model paths |
+| `backend/pytest.ini` | pytest configuration: asyncio_mode=auto, testpaths=tests, DJANGO_SETTINGS_MODULE |
+| `backend/tests/__init__.py` | Test package marker |
+| `backend/tests/conftest.py` | Shared fixtures: `wav_bytes`, `landmarks`, `fake_session_id`, `make_wav_bytes()`, `make_landmarks()` |
+| `backend/tests/test_pipelines.py` | Unit tests for all 4 pipelines (8.2): NEUTRAL_FALLBACK, score bounds, never-raise, FusionPipeline fallback dict |
+| `backend/tests/test_celery_tasks.py` | Celery eager-mode tests (8.3): Redis key pattern, score value, MongoDB write, Channels group_send |
+| `backend/tests/test_websocket_consumer.py` | WS consumer integration tests (8.1): lifecycle, validation errors, reconnect constants (8.7) |
+| `backend/tests/test_pdf_report.py` | PDF generation tests (8.6): %PDF header, Hebrew RTL, 10s latency budget, GridFS mock |
+
+---
+
+## Phase 3.8 + Test Run — End-to-End Session Test & Bug Fixes
+**Status: Complete**
+
+### What was done
+Completed checklist item 3.8 (previously deferred) and ran the full test suite for the first time, fixing all failures discovered.
+
+### New file created
+
+| File | Purpose |
+|---|---|
+| `backend/tests/test_e2e_session.py` | End-to-end session flow test: connect → session_start → video_frame (468 landmarks) → audio_chunk (WAV) → session_end; all over in-memory Channels layer |
+
+### Bugs found and fixed
+
+| File | Bug | Fix |
+|---|---|---|
+| `backend/deepcue_backend/settings/test.py` | `DJANGO_SECRET_KEY` / `MONGODB_URI` env vars not set before base.py import caused `KeyError` | Added `os.environ.setdefault(...)` calls before the `from base import *` |
+| `backend/pytest.ini` | `from conftest import ...` in test files failed — `tests/` not on Python path | Added `tests` to `pythonpath` in pytest.ini |
+| `backend/tasks/video_tasks.py` | `run_fusion` imported inside function body — `@patch("tasks.video_tasks.run_fusion")` raised `AttributeError` | Moved import to module level |
+| `backend/tasks/fusion_tasks.py` | `get_sync_db` / `EmotionFrame` imported inside function body — `@patch` raised `AttributeError` | Moved imports to module level |
+| `backend/tasks/report_tasks.py` | `get_sync_db`, `store_report`, `InterviewReportGenerator` imported inside function body | Moved imports to module level |
+| `backend/tests/test_celery_tasks.py` | `channel_layer.group_send` was a plain `MagicMock` — `async_to_sync` raised `TypeError: can't be awaited` | Changed to `AsyncMock()` for `group_send` |
+| `backend/apps/reporting/report_generator.py` | `BaseDocTemplate.build()` doesn't accept `onFirstPage`/`onLaterPages` kwargs | Moved border callback to `PageTemplate(onPage=...)` |
+| `backend/apps/reporting/report_generator.py` | `<para dir="rtl">` is not valid ReportLab markup — raised `paraparser: syntax error` | Removed the `<para>` wrapper; RTL is handled by the `body_rtl` `ParagraphStyle` |
+| `backend/apps/reporting/pdf_storage.py` | `get_sync_db` and `GridFS` imported inside functions — `@patch` raised `AttributeError` | Moved imports to module level |
+
+### Final test result
+```
+49 passed, 2 warnings in 1.65s
+```
 
 ---
 

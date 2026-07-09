@@ -1,189 +1,139 @@
 # DeepCue
 
-Real-time multimodal emotion recognition system for Hebrew-speaking job interview candidates.
+**Real-time multimodal emotion recognition for Hebrew-speaking job interview candidates.**
 
-Analyzes facial micro-expressions, paralinguistic audio features, and speech semantics simultaneously, fusing all three streams into a unified 8-class emotion output. Generates a structured PDF report at the end of each session.
+DeepCue analyzes three signal streams simultaneously — facial micro-expressions (video), paralinguistic features (audio), and speech semantics (Hebrew text via ASR) — and fuses them into a unified 8-class emotion prediction, streamed live over WebSocket during an interview session. At session end, it generates a structured 5-section PDF report with full Hebrew RTL support.
 
----
+All inference runs on **CPU-only consumer hardware** under a **< 10 second end-to-end latency budget**, using quantized/optimized ONNX models trained offline on GPU.
 
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Browser (Frontend)                        │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │ MediaPipe JS │  │ Web Audio API│  │    UI Controller      │  │
-│  │ Face Mesh    │  │ Mic capture  │  │ Emotion panel, live   │  │
-│  │ 468 landmarks│  │ 3s chunks    │  │ transcript, controls  │  │
-│  └──────┬───────┘  └──────┬───────┘  └───────────────────────┘  │
-│         │   landmark JSON │   base64 audio                       │
-└─────────┼─────────────────┼───────────────────────────────────────┘
-          │                 │  WebSocket (ws/interview/<session_id>/)
-┌─────────▼─────────────────▼───────────────────────────────────────┐
-│                    Django + Django Channels                        │
-│                    InterviewConsumer (async)                       │
-│                    motor → MongoDB Atlas (async writes)            │
-└──────────┬──────────────────┬─────────────────────────────────────┘
-           │ Celery tasks      │
-    ┌──────▼──────┐    ┌───────▼──────┐    ┌──────────────┐
-    │ video_queue │    │ audio_queue  │    │ fusion_queue │
-    │             │    │              │    │              │
-    │ Video       │    │ Audio        │    │ Fusion       │
-    │ Pipeline    │    │ Pipeline     │    │ Pipeline     │
-    │ EfficientNet│    │ wav2vec 2.0  │    │ Cross-modal  │
-    │ -B0 + LSTM  │    │ + librosa    │    │ Transformer  │
-    │ (ONNX/CPU)  │    │ (ONNX/CPU)  │    │ + MLP head   │
-    └──────┬──────┘    └──────┬───────┘    └──────┬───────┘
-           │                  │   Text Pipeline    │
-           │            ┌─────▼──────┐             │
-           │            │  Whisper   │             │
-           │            │ (Hebrew    │             │
-           │            │  STT) +    │             │
-           │            │ XLM-RoBERTa│             │
-           │            │ (ONNX/CPU) │             │
-           │            └─────┬──────┘             │
-           │                  │                    │
-           └──────────────────┴────────────────────┘
-                         Redis cache
-                    (per-session modality scores)
-                              │
-                    ┌─────────▼──────────┐
-                    │   MongoDB Atlas    │
-                    │  Session document  │
-                    │  Emotion frames    │
-                    │  Transcript segs   │
-                    └─────────┬──────────┘
-                              │
-                    ┌─────────▼──────────┐
-                    │  ReportLab PDF     │
-                    │  5-section report  │
-                    │  Hebrew RTL text   │
-                    │  GridFS storage    │
-                    └────────────────────┘
-```
+> **Status: active development.** The core pipeline (three modality models, fusion, live streaming, PDF reporting) is functional and under continuous improvement. Planned next: a bidirectional AI interviewer (live spoken questions driven by the candidate's emotional state), an upgraded 8-class text model, and fusion retraining on real paired interview data. See [Roadmap](#roadmap).
 
 **8 emotion classes:** `neutral` · `confident` · `anxious` · `happy` · `sad` · `angry` · `surprised` · `uncertain`
 
 ---
 
-## Environment Split
+## System Architecture
 
-This project is split across two compute environments:
+```
+ Browser ──► MediaPipe Face Mesh (468 landmarks) ─┐
+         ──► Web Audio API (3s chunks)            ├─► WebSocket ws/interview/<session_id>/
+                                                  ┘
+ Django Channels (InterviewConsumer)
+   └─ validate → rate-limit → dispatch to Celery (never infers inline)
+        ├─ video_queue  → EfficientNet-B0 + LSTM        (ONNX, CPU)
+        ├─ audio_queue  → wav2vec 2.0 + librosa         (ONNX, CPU)
+        │                 Whisper ASR → XLM-RoBERTa     (ONNX, CPU)
+        └─ per-modality scores → Redis (keyed by session)
+             └─ fusion_queue → Cross-Modal Transformer (17-dim input)
+                  └─ emotion_result → browser (Channels group) + MongoDB
+ session_end → Celery report task → ReportLab PDF (Hebrew RTL) → GridFS
+```
 
-| Concern | Environment | Location |
-|---|---|---|
-| Model training & fine-tuning | Kaggle GPU (T4/P100/A100) | `kaggle_scripts/` |
-| ONNX export & INT8 quantization | Kaggle GPU | `kaggle_scripts/` |
-| Live inference (all 4 pipelines) | Local Windows CPU | `backend/apps/inference/` |
-| WebSocket server + task queue | Local / any server | `backend/` |
-| Frontend | Browser | `frontend/` |
+Full design rationale — latency budget, ONNX decision, queue topology, failure handling — in **[docs/architecture.md](docs/architecture.md)**.
 
-Training never runs locally. The Django backend only loads pre-quantized `.onnx` weight files produced by the Kaggle scripts and dropped into `models/`.
+### Design constraints
+
+| Constraint | Target |
+|---|---|
+| End-to-end latency (all 3 modalities → fused result) | < 10 s on consumer CPU, no GPU |
+| Per-model quality gate | Macro F1 ≥ 0.50 (RAVDESS / sentiment benchmarks) |
+| Live-session resilience | A pipeline failure degrades to neutral — never crashes the session |
+
+### Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | HTML5 · vanilla JS (ES modules, no build step) · MediaPipe Face Mesh · Web Audio API |
+| Realtime server | Django 4.2 · Channels 4 · Daphne (ASGI) |
+| Task queue | Celery 5 · Redis (broker, result backend, channel layer, score cache) |
+| Persistence | MongoDB (motor async + pymongo) · GridFS for PDFs |
+| Inference runtime | ONNX Runtime (CPU) — models exported & optimized on GPU, consumed here |
+| Models | EfficientNet-B0+LSTM (video) · wav2vec 2.0 (audio) · Whisper + XLM-RoBERTa (text) · Cross-Modal Transformer (fusion) |
+| Reporting | ReportLab — 5-section PDF, RTL Hebrew, charts |
+| Training (offline, GPU) | PyTorch · HuggingFace Transformers · timm · optimum |
 
 ---
 
-## Directory Structure
+## Repository Map
 
 ```
 DeepCue/
-├── backend/
-│   ├── deepcue_backend/          # Django project package
-│   │   └── settings/             # base.py · local.py · production.py
-│   ├── apps/
-│   │   ├── sessions_app/         # Session lifecycle, MongoDB writes
-│   │   ├── inference/            # VideoEmotionPipeline, AudioEmotionPipeline,
-│   │   │                         # TextEmotionPipeline, FusionPipeline
-│   │   └── reporting/            # ReportLab PDF generator, GridFS storage
-│   ├── tasks/                    # Celery tasks (video, audio, text, fusion, report)
-│   └── db/                       # MongoDB client, TypedDict document schemas
-├── frontend/                     # HTML/JS SPA — no build step required
-├── kaggle_scripts/               # GPU training + ONNX export (run on Kaggle only)
-├── models/
-│   ├── video/                    # efficientnet_lstm.onnx
-│   ├── audio/                    # wav2vec2_classifier.onnx
-│   ├── text/                     # xlm_roberta_sentiment.onnx + whisper_cache/
-│   └── fusion/                   # cross_modal_transformer.onnx
-├── reports/                      # Generated PDFs (gitignored)
-├── scripts/                      # Dev utility scripts
-├── .env.example                  # All required environment variables
-├── docker-compose.yml            # Redis + MongoDB (local dev infrastructure)
-├── requirements.txt              # Django backend — CPU inference
-└── requirements_kaggle.txt       # Kaggle training — GPU
+├── backend/            # Django + Channels inference server (CPU-only runtime)
+│   ├── apps/           # sessions_app (WS protocol) · inference (4 pipelines) · reporting
+│   ├── tasks/          # Celery tasks per queue: video, audio, text, fusion, report
+│   ├── db/             # MongoDB client + document schemas
+│   └── tests/          # pytest suite — runs with zero live infrastructure
+├── frontend/           # HTML/JS SPA — served by serve.py, no build step
+├── training/           # Clean training/export scripts (run on Kaggle GPU, never locally)
+├── notebooks/          # Research notebooks with preserved outputs (EDA → training → eval)
+├── models/             # ONNX weights land here (gitignored — see Model Artifacts)
+├── docs/               # architecture.md · RESULTS.md · DEPLOYMENT.md
+├── requirements.txt        # Production/inference dependencies (CPU)
+└── requirements-train.txt  # Training dependencies (Kaggle GPU)
 ```
+
+Training and inference are strictly separated: `training/` produces `.onnx` artifacts on Kaggle GPUs; `backend/` only ever loads them. Nothing trains locally.
 
 ---
 
-## Local Development Setup
+## Quickstart
 
 ### Prerequisites
 
-- Python 3.11+
-- Docker Desktop (for Redis + MongoDB)
-- A Kaggle account (for training; not required to run the inference server)
+- **Python 3.12** (3.14 has broken C-extension wheels for several dependencies)
+- **Redis 6/7** — on Windows use [Memurai](https://www.memurai.com/) as a native service (Docker Desktop's TCP proxy breaks the asyncio streams Channels/Daphne rely on)
+- **MongoDB** — Atlas free tier or a local instance
 
-### 1. Clone and create virtual environment
+### 1. Clone and install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/RachelBSade/DeepCue.git
 cd DeepCue
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### 2. Install backend dependencies
-
-```bash
+python -m venv venv
+venv\Scripts\activate        # Windows  (source venv/bin/activate on macOS/Linux)
 pip install -r requirements.txt
 ```
 
-### 3. Configure environment
+### 2. Configure
 
 ```bash
-cp .env.example .env
-# Edit .env — set DJANGO_SECRET_KEY and local MongoDB URI:
-# MONGODB_URI=mongodb://deepcue:deepcue_local@localhost:27017/deepcue?authSource=admin
+copy .env.example .env       # cp on macOS/Linux
 ```
 
-### 4. Start infrastructure services
+Set `DJANGO_SECRET_KEY` and `MONGODB_URI`. Redis URLs should use `localhost` (not `127.0.0.1`). Model paths (`VIDEO_MODEL_PATH` etc.) default to `models/<modality>/` — see [Model Artifacts](#model-artifacts).
 
-```bash
-docker compose up -d
-# Redis → localhost:6379
-# MongoDB → localhost:27017
-# Mongo Express UI → http://localhost:8081
-```
-
-### 5. Run Django migrations and start the server
+### 3. Migrate and start the ASGI server
 
 ```bash
 cd backend
 python manage.py migrate
-python manage.py runserver
+python run_daphne.py -b 0.0.0.0 -p 8000 deepcue_backend.asgi:application
 ```
 
-### 6. Start Celery workers (separate terminals)
+### 4. Start Celery workers (one terminal each)
 
 ```bash
-# Video + Audio workers
-celery -A deepcue_backend worker -Q video_queue,audio_queue -c 2 -l info
-
-# Fusion + Report workers
+celery -A deepcue_backend worker -Q video_queue  -c 1 -l info
+celery -A deepcue_backend worker -Q audio_queue  -c 1 -l info
 celery -A deepcue_backend worker -Q fusion_queue -c 1 -l info
 ```
 
-### 7. Open the frontend
+> On Windows, if you run a single combined worker instead, add `--pool=solo` — Celery's default prefork pool requires `os.fork()`.
 
-Open `frontend/index.html` in your browser. Allow camera and microphone access when prompted.
+### 5. Serve the frontend
+
+```bash
+cd frontend
+python serve.py
+```
+
+Open `http://localhost:5500` and allow camera + microphone access. (Don't open `index.html` via `file://` or `python -m http.server` — `serve.py` exists to fix Windows MIME types for ES modules.)
 
 ---
 
 ## Model Artifacts
 
-After running the Kaggle training scripts, download the exported `.onnx` files and place them here:
+The `.onnx` weights are not committed. Download them from the [latest release](https://github.com/RachelBSade/DeepCue/releases) and place them at:
 
 ```
 models/video/efficientnet_lstm.onnx
@@ -192,32 +142,28 @@ models/text/xlm_roberta_sentiment.onnx
 models/fusion/cross_modal_transformer.onnx
 ```
 
-Paths are configurable via `.env` (`VIDEO_MODEL_PATH`, etc.) without touching code.
+Paths are configurable via `.env` without touching code. Whisper weights download automatically on first run (`WHISPER_MODEL_SIZE=base`, cached under `models/text/whisper_cache/`).
 
 ---
 
-## Performance Targets
+## Testing
 
-| Metric | Target |
-|---|---|
-| End-to-end inference latency | < 10 seconds (weak Windows CPU) |
-| Macro F1-score (RAVDESS) | ≥ 0.50 |
-| Macro F1-score (CMU-MOSI) | ≥ 0.50 |
-| WebSocket reconnect | Exponential backoff, max 5 retries |
+```bash
+cd backend
+python -m pytest -q
+```
+
+The suite runs under `deepcue_backend.settings.test` with an in-memory channel layer and `CELERY_TASK_ALWAYS_EAGER=True` — **no live Redis, MongoDB, or `.onnx` files required**, which also makes it CI-friendly.
 
 ---
 
-## Tech Stack
+## Roadmap
 
-| Layer | Technology |
-|---|---|
-| Frontend | HTML5 · Vanilla JS · MediaPipe Face Mesh JS · Web Audio API |
-| WebSocket server | Django Channels 4 · Daphne (ASGI) |
-| Task queue | Celery 5 · Redis 7 |
-| Database | MongoDB Atlas · motor (async) · pymongo (sync) |
-| Video inference | EfficientNet-B0 + LSTM → ONNX (onnxruntime) |
-| Audio inference | wav2vec 2.0 + librosa features → ONNX |
-| Text inference | OpenAI Whisper (STT) + XLM-RoBERTa → ONNX |
-| Fusion | Cross-modal Transformer + MLP head → ONNX |
-| Reporting | ReportLab (PDF · RTL Hebrew · charts) |
-| Training | PyTorch · HuggingFace Transformers · timm · optimum |
+- **Bidirectional AI interviewer** — live spoken questions adapting to the candidate's emotional state (WebSocket protocol slot already reserved)
+- **Text model v2** — upgrade the sentiment regressor to an 8-class emotion classifier matching the video/audio heads
+- **Fusion retraining on real data** — replace synthetic fusion training data with paired multimodal recordings from real sessions
+- **Audio model fine-tuning** — close the remaining gap to the F1 quality gate on cross-source evaluation
+
+## License
+
+MIT — see [LICENSE](LICENSE).

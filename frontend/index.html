@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="he" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepCue — Welcome</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body class="landing-body">
+  <button id="lang-toggle" class="lang-toggle landing-lang-toggle" data-i18n="lang.toggle">עב</button>
+  <div class="landing-shell">
+
+    <div class="landing-illustration" id="landing-illustration">
+      <!-- Friendly animated character — CSS/SVG only, no external video file. -->
+      <svg viewBox="0 0 200 200" class="character-svg" aria-hidden="true">
+        <circle class="char-aura" cx="100" cy="100" r="92" />
+        <ellipse class="char-hair-back" cx="100" cy="98" rx="58" ry="64" />
+        <circle class="char-face" cx="100" cy="92" r="46" />
+        <path class="char-hair-front" d="M54 80 Q60 32 100 30 Q140 32 146 80 Q140 60 100 58 Q60 60 54 80 Z" />
+        <g class="char-eyes">
+          <ellipse class="char-eye" cx="82" cy="92" rx="5" ry="7" />
+          <ellipse class="char-eye" cx="118" cy="92" rx="5" ry="7" />
+        </g>
+        <path class="char-smile" d="M80 110 Q100 126 120 110" />
+        <circle class="char-cheek" cx="70" cy="104" r="6" />
+        <circle class="char-cheek" cx="130" cy="104" r="6" />
+        <path class="char-wave-arm" d="M146 130 Q170 110 168 80" />
+        <circle class="char-hand" cx="168" cy="78" r="9" />
+      </svg>
+      <p class="landing-greeting" data-i18n="landing.greeting">Hi! I'm here to guide you through your interview.</p>
+    </div>
+
+    <form id="landing-form" class="landing-form">
+      <h1 class="landing-title"><span data-i18n="landing.title">Welcome to</span> <span class="logo-cue">DeepCue</span></h1>
+      <p class="landing-subtitle" data-i18n="landing.subtitle">Let's get a few details before we begin.</p>
+
+      <label class="landing-label" for="full-name-input">
+        <span data-i18n="landing.name_label">Full name</span> <span class="required-mark">*</span>
+      </label>
+      <input
+        id="full-name-input"
+        class="landing-input"
+        type="text"
+        data-i18n-placeholder="landing.name_ph"
+        placeholder="Your full name"
+        maxlength="80"
+        required
+      />
+
+      <label class="landing-label" for="email-input">
+        <span data-i18n="landing.email_label">Email</span> <span class="optional-mark" data-i18n="landing.optional">(optional)</span>
+      </label>
+      <input
+        id="email-input"
+        class="landing-input"
+        type="email"
+        placeholder="you@example.com"
+        maxlength="120"
+      />
+      <p class="email-hint" data-i18n="landing.email_hint">
+        Leave your email if you'd like your interview report sent to you automatically once it's ready.
+      </p>
+
+      <div id="landing-error" class="landing-error"></div>
+
+      <button type="submit" class="btn btn-start landing-submit" data-i18n="landing.submit">Continue →</button>
+    </form>
+
+  </div>
+
+  <script type="module" src="landing.js"></script>
+</body>
+</html>

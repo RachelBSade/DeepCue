@@ -11,10 +11,17 @@ venv/
 
 # Model weights — large binary files, downloaded after training
 models/video/*.onnx
+models/video/*.onnx.data
 models/audio/*.onnx
+models/audio/*.onnx.data
 models/text/*.onnx
+models/text/*.onnx.data
 models/fusion/*.onnx
+models/fusion/*.onnx.data
 models/text/whisper_cache/
+
+# Backend-local model cache (Whisper base.pt etc.) — large binaries, not for VCS
+backend/models/
 
 # Generated reports
 reports/
@@ -26,3 +33,10 @@ db.sqlite3
 # OS
 .DS_Store
 Thumbs.db
+
+checkpoints/
+ignore/
+deepcue_workflow_checklist.md
+PROJECT.md
+~$*.pptx
+env.example

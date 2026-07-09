@@ -1,0 +1,512 @@
+/* =============================================================================
+   DeepCue — Interview UI Styles
+   Light theme, purple/white palette, Hebrew RTL-ready transcript panel.
+   ============================================================================= */
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base:        #fbf7fd;
+  --bg-surface:     #ffffff;
+  --bg-elevated:    #f6ecfa;
+  --border:         #e8d5f5;
+  --accent:         #b347ea;
+  --accent-dim:     #9d2fce;
+  --text-primary:   #4a1f52;
+  --text-secondary: #8a6a9c;
+  --text-muted:     #c2a8d4;
+  --success:        #b347ea;
+  --warning:        #d896f0;
+  --danger:         #c026d3;
+
+  /* emotion colour palette — warm purple/magenta/lilac family, no blue/red/black */
+  --em-neutral:    #cdb8e0;
+  --em-confident:  #a21caf;
+  --em-anxious:    #e8c2fb;
+  --em-happy:      #f0a8e8;
+  --em-sad:        #86198f;
+  --em-angry:      #701a75;
+  --em-surprised:  #d946ef;
+  --em-uncertain:  #b9a0cc;
+
+  --radius:   8px;
+  --radius-sm: 4px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  /* User-adjustable panel sizes — set by ui_controller.js drag handles, persisted in localStorage */
+  --camera-size:   340px;
+  --question-size: 88px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app-shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-areas:
+    "header"
+    "question"
+    "main"
+    "transcript"
+    "controls";
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(12px, 3vw, 24px);
+  gap: 12px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.app-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 8px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.logo { font-size: clamp(18px, 2.5vw, 22px); font-weight: 700; letter-spacing: -0.5px; }
+.logo-deep  { color: var(--text-primary); }
+.logo-cue   { color: var(--accent); }
+
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.lang-toggle {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-elevated);
+  color: var(--accent-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lang-toggle:hover { background: var(--border); }
+
+.session-timer {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-idle       { background: var(--bg-elevated); color: var(--text-muted); }
+.status-connecting { background: rgba(245,166,35,0.15); color: var(--warning); }
+.status-active     { background: rgba(62,207,142,0.15); color: var(--success); }
+.status-ended      { background: rgba(79,142,247,0.15); color: var(--accent); }
+.status-error      { background: rgba(229,83,75,0.15);  color: var(--danger); }
+
+/* ── Pre-question countdown overlay ──────────────────────────────────────── */
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(74, 31, 82, 0.55);
+  backdrop-filter: blur(3px);
+}
+.countdown-overlay.hidden { display: none; }
+
+.countdown-number {
+  font-size: clamp(80px, 18vw, 160px);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  animation: countdownPulse 1s ease;
+}
+
+@keyframes countdownPulse {
+  0%   { transform: scale(1.4); opacity: 0; }
+  40%  { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.countdown-label {
+  font-size: 16px;
+  color: #f0e3fa;
+  letter-spacing: 0.5px;
+}
+
+/* ── Question carousel ────────────────────────────────────────────────────── */
+.question-panel {
+  position: relative;
+  grid-area: question;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  min-height: var(--question-size);
+}
+.question-panel.hidden { display: none; }
+
+.question-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -7px;
+  height: 14px;
+  cursor: row-resize;
+}
+.question-resizer::after {
+  content: '';
+  display: block;
+  margin: 5px auto 0;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.question-resizer:hover::after,
+.question-resizer.dragging::after {
+  background: var(--accent);
+}
+
+.question-progress {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-dim);
+  white-space: nowrap;
+}
+
+.question-text {
+  flex: 1;
+  font-size: clamp(18px, 2.4vw, 24px);
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 200px;
+}
+
+.question-next {
+  white-space: nowrap;
+  padding: 11px 22px;
+  font-size: 13px;
+}
+
+/* ── Main content ─────────────────────────────────────────────────────────── */
+.main-content {
+  grid-area: main;
+  display: flex;
+  min-height: 0;
+}
+
+/* order is on the panels themselves, not the grid track, so flex-basis (the camera's
+   resizable width) follows the panel wherever it ends up after a swap */
+.video-panel    { order: 0; }
+.panel-resizer  { order: 1; }
+.emotion-panel  { order: 2; }
+
+/* Swap left/right placement of the camera and emotion panels only — the resizer stays
+   visually between them since its own order never changes */
+.main-content.layout-swapped .video-panel   { order: 2; }
+.main-content.layout-swapped .emotion-panel { order: 0; }
+
+/* ── Drag-to-resize divider between camera and emotion panel (VS Code-style) ───────── */
+.panel-resizer {
+  flex: 0 0 14px;
+  cursor: col-resize;
+  position: relative;
+}
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.panel-resizer:hover::after,
+.panel-resizer.dragging::after {
+  background: var(--accent);
+}
+
+/* Visual feedback while a panel is "armed" for a long-press swap-drag */
+.video-panel.swap-armed,
+.emotion-panel.swap-armed {
+  cursor: grabbing;
+  opacity: 0.85;
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Video panel ──────────────────────────────────────────────────────────── */
+.video-panel {
+  flex: 0 0 var(--camera-size);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.video-wrapper {
+  position: relative;
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+#webcam {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1); /* mirror for natural feel */
+}
+
+.no-camera-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+.no-camera-overlay.hidden { display: none; }
+
+.candidate-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* ── Emotion panel ────────────────────────────────────────────────────────── */
+.emotion-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+}
+
+.emotion-bars { display: flex; flex-direction: column; gap: 18px; }
+
+.emotion-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 48px;
+  align-items: center;
+  gap: 14px;
+}
+
+.emotion-label {
+  font-size: 15px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 12px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  background: var(--em-neutral);
+}
+
+/* Per-emotion bar colours */
+.emotion-row[data-emotion="neutral"]   .bar-fill { background: var(--em-neutral); }
+.emotion-row[data-emotion="confident"] .bar-fill { background: var(--em-confident); }
+.emotion-row[data-emotion="anxious"]   .bar-fill { background: var(--em-anxious); }
+.emotion-row[data-emotion="happy"]     .bar-fill { background: var(--em-happy); }
+.emotion-row[data-emotion="sad"]       .bar-fill { background: var(--em-sad); }
+.emotion-row[data-emotion="angry"]     .bar-fill { background: var(--em-angry); }
+.emotion-row[data-emotion="surprised"] .bar-fill { background: var(--em-surprised); }
+.emotion-row[data-emotion="uncertain"] .bar-fill { background: var(--em-uncertain); }
+
+.emotion-score {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.dominant-emotion {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dominant-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; }
+.dominant-value { font-size: 26px; font-weight: 700; color: var(--text-primary); text-transform: capitalize; }
+
+.speech-rate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.speech-rate-value { font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Transcript panel ─────────────────────────────────────────────────────── */
+.transcript-panel {
+  grid-area: transcript;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 140px;
+}
+
+.transcript-lang { color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+
+.transcript-feed {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  /* Hebrew RTL is set via dir="rtl" on the element */
+}
+
+.transcript-segment {
+  display: block;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeIn 0.3s ease;
+}
+.transcript-segment:last-child { border-bottom: none; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+/* ── Controls bar ─────────────────────────────────────────────────────────── */
+.controls-bar {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-top: 1px solid var(--border);
+}
+
+.candidate-input {
+  flex: 1;
+  max-width: 240px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.candidate-input:focus { border-color: var(--accent); }
+.candidate-input:disabled { opacity: 0.4; }
+
+.btn {
+  padding: 9px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-start { background: var(--accent); color: #fff; }
+.btn-start:hover:not(:disabled) { background: var(--accent-dim); }
+
+.btn-stop { background: var(--danger); color: #fff; }
+.btn-stop:hover:not(:disabled) { opacity: 0.85; }
+
+.error-message {
+  flex: 1;
+  font-size: 12px;
+  color: var(--danger);
+  min-height: 16px;
+}
+
+/* ── Scrollbar styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-shell { height: auto; min-height: 100vh; }
+  .main-content { flex-direction: column; }
+  .video-panel { flex: 0 0 auto; }
+  .panel-resizer { display: none; } /* dragging width doesn't apply once panels are stacked */
+  .video-wrapper { aspect-ratio: 4 / 3; flex: none; }
+  .emotion-panel { max-height: 320px; }
+  .question-panel { padding: 14px 16px; }
+}
+
+@media (max-width: 480px) {
+  .app-shell { padding: 0 10px; gap: 8px; }
+  .controls-bar { flex-wrap: wrap; }
+  .candidate-name-display { width: 100%; order: -1; }
+  .question-panel { flex-direction: column; align-items: stretch; text-align: center; }
+  .question-next { width: 100%; }
+  .transcript-panel { max-height: 110px; }
+}

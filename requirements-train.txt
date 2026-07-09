@@ -1,0 +1,61 @@
+# =============================================================================
+# DeepCue — Research / Training Requirements (GPU environment)
+# Environment: Kaggle Notebooks / Google Colab (CUDA 12.x, A100/T4/P100)
+# Purpose:     Full model training, fine-tuning, ONNX export, and INT8
+#              dynamic quantization. Produces the .onnx artifacts consumed
+#              by the Django backend (requirements.txt). NEVER installed on
+#              the inference server.
+#
+# Install (in a Kaggle/Colab notebook cell):
+#   !pip install -r requirements-train.txt
+#
+# NOTE: Kaggle pre-installs torch + CUDA. If versions conflict, pin explicitly.
+#       PyTorch is listed here for reproducibility but may be a no-op on Kaggle.
+# =============================================================================
+
+# --- PyTorch (CUDA — Kaggle pre-installs, listed for reproducibility) --------
+torch==2.3.1
+torchaudio==2.3.1
+torchvision==0.18.1               # EfficientNet data augmentation pipelines
+
+# --- HuggingFace Ecosystem ---------------------------------------------------
+transformers==4.43.3              # wav2vec2, XLM-RoBERTa, Whisper model classes
+datasets==2.21.0                  # RAVDESS / sentiment dataset loading + preprocessing
+accelerate==0.33.0                # Multi-GPU / mixed-precision training utilities
+evaluate==0.4.2                   # Macro F1, accuracy, and other HF metrics
+sentencepiece==0.2.0              # XLM-RoBERTa tokenizer backend
+tokenizers==0.19.1                # Fast tokenizer (HuggingFace)
+
+# --- ONNX Export & Quantization ----------------------------------------------
+onnx==1.16.1                      # ONNX IR — model graph construction + validation
+onnxruntime-gpu==1.18.1           # GPU-accelerated ONNX inference (validation post-export)
+optimum==1.21.4                   # HuggingFace → ONNX export tooling (ORTOptimizer etc.)
+onnxruntime-tools==1.7.0          # Legacy quantization utilities (dynamic INT8)
+
+# --- Vision Models -----------------------------------------------------------
+timm==1.0.9                       # EfficientNet-B0 pretrained weights + architecture
+
+# --- Audio Feature Extraction ------------------------------------------------
+librosa==0.10.2.post1             # Pitch, MFCCs, RMS energy, spectrograms
+soundfile==0.12.1
+audioread==3.0.1
+
+# Whisper — used in training pipeline to generate text labels from audio
+openai-whisper==20231117
+
+# --- Data Science & Evaluation -----------------------------------------------
+numpy==1.26.4
+pandas==2.2.2                     # Dataset metadata, CSV loading
+scikit-learn==1.5.1               # Macro F1, train/test split, label encoding
+matplotlib==3.9.1                 # Loss curves, confusion matrices
+seaborn==0.13.2                   # Heatmaps for emotion class distributions
+
+# --- Training Utilities ------------------------------------------------------
+tensorboard==2.17.0               # Training loss / metric visualization
+tqdm==4.66.4                      # Progress bars for dataset iteration
+pydantic==2.8.2                   # Config dataclass validation for training scripts
+python-dotenv==1.0.1              # Load API keys / paths from .env in notebooks
+
+# --- Serialization -----------------------------------------------------------
+protobuf==4.25.4                  # ONNX + HuggingFace serialization dependency
+typing-extensions==4.12.2
